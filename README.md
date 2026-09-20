@@ -34,3 +34,19 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+
+apk update && apk upgrade
+apk add nodejs npm bash git curl build-base
+
+
+
+# 1. Crear directorios y asegurar que pertenecen al usuario postgres
+mkdir -p /var/lib/postgresql/data
+chown -R postgres:postgres /var/lib/postgresql
+chmod 700 /var/lib/postgresql/data
+
+# 2. Inicializar la estructura interna de la base de datos
+su - postgres -c "initdb -D /var/lib/postgresql/data"
+
+
