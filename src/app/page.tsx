@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useState } from "react";
 // Importamos la pieza reactiva desde nuestra carpeta de componentes
-import { Vista, HijoProps } from '@/components/types'; // Importas el tipo centralizado
+import { Vista } from '@/components/types'; // Importas el tipo centralizado
 import ComponenteInicio from '@/components/ComponenteInicio';
 import ComponenteInicioPromocion from '@/components/ComponenteInicioPromocion';
 import ComponenteVerDetalles from '@/components/ComponenteVerDetalles';
@@ -28,7 +28,10 @@ export default function NavegacionInterna() {
 
   switch (vistaActiva) {
       case 'accessadmin': 
-        return <ComponenteAccessAdmin cambiarVista={setVistaActiva} />;
+        return <ComponenteAccessAdmin 
+                 vistaActiva={vistaActiva} 
+                 cambiarVista={cambiarVista} 
+              />;
   }
   
   const renderizarInterfaz = () => {  
@@ -57,7 +60,7 @@ export default function NavegacionInterna() {
   return (
 
      
-<div className="min-h-screen w-full max-w-full text-white flex flex-col font-sans relative transition-colors duration-300 selection:bg-[var(--color-primary)] selection:text-white" style={{ '-ColorPrimary': '#f8f400', '-ColorSecondary': '#f4ef00', '-ColorBackground': '#000000FC', '-ColorSurface': '#151f3247', '-ColorText': '#ffffff', '-ColorPrimaryDark': '#f8f400', '-ColorPrimaryForeground': '#000000', 'backgroundColor': 'rgba(0,0,0,0.99)' }}>
+<div className="min-h-screen w-full max-w-full text-white flex flex-col font-sans relative transition-colors duration-300 selection:bg-[var(--color-primary)] selection:text-white" style={{ '--ColorPrimary': '#f8f400', '--ColorSecondary': '#f4ef00', '--ColorBackground': '#000000FC', '--ColorSurface': '#151f3247', '--ColorText': '#ffffff', '--ColorPrimaryDark': '#f8f400', '--ColorPrimaryForeground': '#000000', 'backgroundColor': 'rgba(0,0,0,0.99)' } as React.CSSProperties}>
     <ComponenteConsultarCTResultados
       vistaActiva={vistaActiva} 
       cambiarVista={setVistaActiva} 

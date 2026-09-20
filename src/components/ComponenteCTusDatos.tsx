@@ -101,9 +101,9 @@ export default function ComponenteCMetodoDePago({ cambiarVista }: HijoProps) {
             <select className="w-full bg-slate-950 border rounded-lg px-4 py-3 text-white outline-none transition-all border-slate-700 focus:border-[var(--color-primary)]">
               <option
                 value=""
-                disabled=""
+                disabled={true}
                 className="text-slate-600"
-                selected=""
+                selected={true}
               >
                 Selecciona tu Estado
               </option>

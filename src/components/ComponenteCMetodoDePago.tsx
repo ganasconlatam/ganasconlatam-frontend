@@ -466,7 +466,7 @@ export default function ComponenteCMetodoDePago({ cambiarVista }: HijoProps) {
                           <option
                             value="0102"
                             className="bg-slate-900"
-                            selected=""
+                            selected={true}
                           >
                             0102 - BANCO DE VENEZUELA
                           </option>

@@ -123,7 +123,7 @@ export default function ComponenteCSeleccionManualTickets({ cambiarVista }: Hijo
     <div className="flex-1 overflow-y-auto p-4 bg-slate-850 relative">
       <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-2">
         <button
-          disabled=""
+          disabled={true}
           className="h-12 md:h-14 rounded-xl text-base md:text-lg font-mono font-black transition-all duration-200 border-2 bg-red-900/20 border-red-900/50 text-red-700 cursor-not-allowed opacity-50"
         >
           1000
@@ -132,19 +132,19 @@ export default function ComponenteCSeleccionManualTickets({ cambiarVista }: Hijo
           1001
         </button>
         <button
-          disabled=""
+          disabled={true}
           className="h-12 md:h-14 rounded-xl text-base md:text-lg font-mono font-black transition-all duration-200 border-2 bg-red-900/20 border-red-900/50 text-red-700 cursor-not-allowed opacity-50"
         >
           1002
         </button>
         <button
-          disabled=""
+          disabled={true}
           className="h-12 md:h-14 rounded-xl text-base md:text-lg font-mono font-black transition-all duration-200 border-2 bg-red-900/20 border-red-900/50 text-red-700 cursor-not-allowed opacity-50"
         >
           1003
         </button>
         <button
-          disabled=""
+          disabled={true}
           className="h-12 md:h-14 rounded-xl text-base md:text-lg font-mono font-black transition-all duration-200 border-2 bg-red-900/20 border-red-900/50 text-red-700 cursor-not-allowed opacity-50"
         >
           1998

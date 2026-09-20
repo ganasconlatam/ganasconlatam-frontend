@@ -2,14 +2,14 @@
 "use client"; 
 
 import { useState } from "react";
-import { HijoProps } from './types'; 
+import { HijoProps, Vista } from './types'; 
 
-interface ComponenteProps {
-  vistaActiva: string;
-  cambiarVista: HijoProps; // O el tipo que tengas en HijoProps
+interface ComponenteProp {
+  vistaActiva: Vista;
+  cambiarVista: (nuevaVista: Vista) => void; // Define que es una función
 }
 
-export default function ComponenteAccessAdmin({ vistaActiva, cambiarVista }: ComponenteProps) {
+export default function ComponenteAccessAdmin({ vistaActiva, cambiarVista }: ComponenteProp) {
   return (
 
 <div className="min-h-screen bg-[#0B1120] flex items-center justify-center p-4 relative overflow-hidden">
@@ -58,7 +58,7 @@ export default function ComponenteAccessAdmin({ vistaActiva, cambiarVista }: Com
           </svg>
           <input
             type="email"
-            required=""
+            required={true}
             className="w-full bg-slate-800/50 border border-slate-700 rounded-xl pl-12 pr-4 py-3.5 text-white outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500/50 transition-all placeholder-slate-600"
             placeholder="admin@rifalotodo.com"
             defaultValue=""
@@ -87,7 +87,7 @@ export default function ComponenteAccessAdmin({ vistaActiva, cambiarVista }: Com
           </svg>
           <input
             type="password"
-            required=""
+            required={true}
             className="w-full bg-slate-800/50 border border-slate-700 rounded-xl pl-12 pr-4 py-3.5 text-white outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500/50 transition-all placeholder-slate-600"
             placeholder="••••••••••••"
           />
