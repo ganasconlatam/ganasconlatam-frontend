@@ -37,6 +37,10 @@ export async function approveOrder(id: string) {
   });
 
   revalidatePath("/admin/boletos");
+  revalidatePath("/admin");
+  revalidatePath("/admin/participantes");
+  revalidatePath("/admin/rifas");
+  revalidatePath("/");
 }
 
 export async function rejectOrder(id: string) {
@@ -46,6 +50,10 @@ export async function rejectOrder(id: string) {
     data: { status: "RECHAZADO" },
   });
   revalidatePath("/admin/boletos");
+  revalidatePath("/admin");
+  revalidatePath("/admin/participantes");
+  revalidatePath("/admin/rifas");
+  revalidatePath("/");
 }
 
 // Reenviar el correo de verificación de pago al comprador

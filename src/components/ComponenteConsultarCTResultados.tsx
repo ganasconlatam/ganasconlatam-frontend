@@ -9,9 +9,9 @@ interface ComponenteProps extends HijoProps {
 }
 
 const STATUS_STYLE: Record<string, { label: string; className: string }> = {
-  APPROVED: { label: "CONFIRMADO", className: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" },
-  PENDING: { label: "EN REVISIÓN", className: "bg-amber-500/10 text-amber-400 border-amber-500/20" },
-  REJECTED: { label: "RECHAZADO", className: "bg-red-500/10 text-red-400 border-red-500/20" },
+  APROBADO: { label: "CONFIRMADO", className: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" },
+  PENDIENTE: { label: "EN REVISIÓN", className: "bg-amber-500/10 text-amber-400 border-amber-500/20" },
+  RECHAZADO: { label: "RECHAZADO", className: "bg-red-500/10 text-red-400 border-red-500/20" },
 };
 
 function formatDate(value: string) {
@@ -87,7 +87,7 @@ export default function ComponenteConsultarCTResultados({ vistaActiva, cambiarVi
 
         <div className="space-y-4">
           {orders.map((order) => {
-            const status = STATUS_STYLE[order.status] ?? STATUS_STYLE.PENDING;
+            const status = STATUS_STYLE[order.status] ?? STATUS_STYLE.PENDIENTE;
             const tickets = order.tickets ?? [];
             return (
               <div key={order.id} className="bg-slate-900 border rounded-2xl p-5 transition-colors relative overflow-hidden border-[var(--color-primary)]/50 shadow-lg shadow-[var(--color-primary)]/10">
