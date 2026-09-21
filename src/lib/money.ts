@@ -3,6 +3,11 @@ export function usdToBs(priceUsd: number, dollarRate: number): number {
   return Math.round(priceUsd * dollarRate * 100) / 100;
 }
 
+// Cantidad de dígitos con la que se formatean los números de una rifa.
+export function ticketPad(totalTickets: number): number {
+  return String(Math.max(totalTickets - 1, 0)).length;
+}
+
 export function formatUsd(value: number): string {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
