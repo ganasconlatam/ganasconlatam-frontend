@@ -18,6 +18,7 @@ import ComponenteConsultarCTResultados from '@/components/ComponenteConsultarCTR
 import ComponenteFichaRifa from '@/components/ComponenteFichaRifa';
 
 import ComponenteAccessAdmin from '@/components/ComponenteAccessAdmin';
+import { PurchaseProvider } from '@/components/PurchaseContext';
 
 export default function NavegacionInterna() {
   const [vistaActiva, setVistaActiva] = useState<Vista>('inicio');
@@ -60,6 +61,7 @@ export default function NavegacionInterna() {
   return (
 
      
+<PurchaseProvider>
 <div className="min-h-screen w-full max-w-full text-white flex flex-col font-sans relative transition-colors duration-300 selection:bg-[var(--color-primary)] selection:text-white" style={{ '--ColorPrimary': '#f8f400', '--ColorSecondary': '#f4ef00', '--ColorBackground': '#000000FC', '--ColorSurface': '#151f3247', '--ColorText': '#ffffff', '--ColorPrimaryDark': '#f8f400', '--ColorPrimaryForeground': '#000000', 'backgroundColor': 'rgba(0,0,0,0.99)' } as React.CSSProperties}>
     <ComponenteConsultarCTResultados
       vistaActiva={vistaActiva} 
@@ -474,5 +476,6 @@ export default function NavegacionInterna() {
 </div>
   
   
+    </PurchaseProvider>
   );
 }
