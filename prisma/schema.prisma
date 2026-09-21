@@ -1,0 +1,127 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+
+model Admin {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      String   @default("admin")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Configuración global del sitio (fila única)
+model SiteConfig {
+  id           Int      @id @default(1)
+  dollarRate   Float    @default(40) // Tasa del día del dólar (Bs por USD)
+  buttonColor  String   @default("#f8f400")
+  borderColor  String   @default("#f8f400")
+  frameColor   String   @default("#151f32")
+  updatedAt    DateTime @updatedAt
+}
+
+model SocialLink {
+  id       String  @id @default(cuid())
+  platform String // whatsapp | instagram | facebook | tiktok | telegram | x | youtube
+  url      String
+  enabled  Boolean @default(true)
+  order    Int     @default(0)
+}
+
+enum RaffleStatus {
+  ACTIVA
+  PROXIMA
+  FINALIZADA
+}
+
+model Raffle {
+  id            String       @id @default(cuid())
+  code          String       @unique // Código único identificador sobre la imagen
+  title         String
+  details       String       @default("")
+  imageUrl      String       @default("")
+  priceUsd      Float        @default(0) // Precio base en USD; Bs se calcula con la tasa
+  progress      Float        @default(0) // % que muestra la barra de progreso (manual)
+  totalTickets  Int          @default(1000)
+  drawDate      String       @default("") // Fecha del sorteo (YYYY-MM-DD)
+  drawTime      String       @default("") // Hora del sorteo (HH:mm)
+  status        RaffleStatus @default(PROXIMA)
+  winnerTicket  String? // Ticket ganador seleccionado manualmente al cierre
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  orders TicketOrder[]
+}
+
+model Participant {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String   @default("")
+  cedula    String   @default("")
+  createdAt DateTime @default(now())
+
+  orders TicketOrder[]
+}
+
+model PaymentMethod {
+  id      String  @id @default(cuid())
+  name    String // Pago Móvil, Zelle, Binance, etc.
+  type    String  @default("otro")
+  details String  @default("") // Datos: teléfono, banco, correo, etc.
+  enabled Boolean @default(true)
+  order   Int     @default(0)
+
+  orders TicketOrder[]
+}
+
+enum OrderStatus {
+  PENDIENTE
+  APROBADO
+  RECHAZADO
+}
+
+// Boletos por aprobar: datos del formulario + referencia + comprobante
+model TicketOrder {
+  id             String       @id @default(cuid())
+  raffleId       String
+  raffle         Raffle       @relation(fields: [raffleId], references: [id])
+  participantId  String?
+  participant    Participant? @relation(fields: [participantId], references: [id])
+
+  buyerName    String
+  buyerEmail   String
+  buyerPhone   String  @default("")
+  buyerCedula  String  @default("")
+
+  ticketCount   Int      @default(1)
+  ticketNumbers String   @default("") // números asignados, separados por coma
+  amountUsd     Float    @default(0)
+  amountBs      Float    @default(0)
+
+  paymentMethodId String?
+  paymentMethod   PaymentMethod? @relation(fields: [paymentMethodId], references: [id])
+  reference       String         @default("") // referencia del pago
+  proofUrl        String         @default("") // comprobante de pago
+
+  status    OrderStatus @default(PENDIENTE)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+}
+
+// Top 3 de compras, posiciones colocadas manualmente
+model TopPurchase {
+  id       String @id @default(cuid())
+  position Int    @default(1) // 1, 2, 3 (libremente asignable)
+  name     String
+  detail   String @default("") // ej: cantidad de boletos o monto
+  amount   Float  @default(0)
+}

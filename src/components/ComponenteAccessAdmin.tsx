@@ -2,14 +2,42 @@
 "use client"; 
 
 import { useState } from "react";
-import { HijoProps, Vista } from './types'; 
+import { Vista } from './types'; 
 
 interface ComponenteProp {
-  vistaActiva: Vista;
-  cambiarVista: (nuevaVista: Vista) => void; // Define que es una función
+  vistaActiva?: Vista;
+  cambiarVista?: (nuevaVista: Vista) => void; // Define que es una función
 }
 
 export default function ComponenteAccessAdmin({ vistaActiva, cambiarVista }: ComponenteProp) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    try {
+      const res = await fetch("/api/admin/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "No se pudo iniciar sesión");
+        setLoading(false);
+        return;
+      }
+      window.location.href = "/admin";
+    } catch {
+      setError("Error de conexión. Intenta de nuevo.");
+      setLoading(false);
+    }
+  }
+
   return (
 
 <div className="min-h-screen bg-[#0B1120] flex items-center justify-center p-4 relative overflow-hidden">
@@ -35,7 +63,7 @@ export default function ComponenteAccessAdmin({ vistaActiva, cambiarVista }: Com
         Acceso restringido para personal autorizado
       </p>
     </div>
-    <form className="p-8 pt-0 space-y-5">
+    <form className="p-8 pt-0 space-y-5" onSubmit={handleSubmit}>
       <div className="space-y-2">
         <label className="text-xs font-bold text-slate-500 uppercase ml-1">
           Correo Corporativo
@@ -59,9 +87,10 @@ export default function ComponenteAccessAdmin({ vistaActiva, cambiarVista }: Com
           <input
             type="email"
             required={true}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             className="w-full bg-slate-800/50 border border-slate-700 rounded-xl pl-12 pr-4 py-3.5 text-white outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500/50 transition-all placeholder-slate-600"
-            placeholder="admin@rifalotodo.com"
-            defaultValue=""
+            placeholder="admin@ganasconlatam.com"
           />
         </div>
       </div>
@@ -88,16 +117,24 @@ export default function ComponenteAccessAdmin({ vistaActiva, cambiarVista }: Com
           <input
             type="password"
             required={true}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
             className="w-full bg-slate-800/50 border border-slate-700 rounded-xl pl-12 pr-4 py-3.5 text-white outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500/50 transition-all placeholder-slate-600"
             placeholder="••••••••••••"
           />
         </div>
       </div>
+      {error ? (
+        <div className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+          {error}
+        </div>
+      ) : null}
       <button
         type="submit"
+        disabled={loading}
         className="w-full bg-primary-500 hover:bg-primary-600 text-slate-900 font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-primary-500/20 flex items-center justify-center gap-2 mt-4 disabled:opacity-70 disabled:cursor-not-allowed"
       >
-        Ingresar al Sistema{" "}
+        {loading ? "Ingresando..." : "Ingresar al Sistema"}{" "}
         <svg
           xmlns="http://www.w3.org/2000/svg"
           width={18}
