@@ -1,9 +1,11 @@
 import {
   getParticipants,
   createParticipant,
+  updateParticipant,
   deleteParticipant,
 } from "@/app/admin/_actions/participants";
 import { PageHeader, Card, inputCls, labelCls, PrimaryButton } from "@/components/admin/ui";
+import { EditableParticipantRow } from "@/components/admin/EditableParticipantRow";
 
 export const dynamic = "force-dynamic";
 
@@ -60,18 +62,12 @@ export default async function ParticipantesPage() {
               </tr>
             ) : (
               participants.map((p) => (
-                <tr key={p.id} className="border-b border-slate-800/60">
-                  <td className="py-3 pr-4 text-white">{p.name}</td>
-                  <td className="py-3 pr-4">{p.email}</td>
-                  <td className="py-3 pr-4">{p.phone || "—"}</td>
-                  <td className="py-3 pr-4">{p.cedula || "—"}</td>
-                  <td className="py-3 pr-4">{p._count.orders}</td>
-                  <td className="py-3 text-right">
-                    <form action={deleteParticipant.bind(null, p.id)}>
-                      <button className="text-red-400 hover:underline">Eliminar</button>
-                    </form>
-                  </td>
-                </tr>
+                <EditableParticipantRow
+                  key={p.id}
+                  participant={p}
+                  updateAction={updateParticipant.bind(null, p.id)}
+                  deleteAction={deleteParticipant.bind(null, p.id)}
+                />
               ))
             )}
           </tbody>

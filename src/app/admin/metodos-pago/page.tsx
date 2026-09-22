@@ -1,10 +1,12 @@
 import {
   getPaymentMethods,
   createPaymentMethod,
+  updatePaymentMethod,
   togglePaymentMethod,
   deletePaymentMethod,
 } from "@/app/admin/_actions/payment-methods";
 import { PageHeader, Card, inputCls, labelCls, PrimaryButton } from "@/components/admin/ui";
+import { EditablePaymentMethod } from "@/components/admin/EditablePaymentMethod";
 
 export const dynamic = "force-dynamic";
 
@@ -55,38 +57,13 @@ export default async function MetodosPagoPage() {
           <p className="text-slate-500">No hay métodos de pago configurados.</p>
         ) : (
           methods.map((m) => (
-            <Card key={m.id}>
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h3 className="font-bold text-white">{m.name}</h3>
-                  <p className="text-xs uppercase text-slate-500">{m.type}</p>
-                </div>
-                <span
-                  className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                    m.enabled
-                      ? "bg-green-500/15 text-green-400"
-                      : "bg-slate-500/15 text-slate-400"
-                  }`}
-                >
-                  {m.enabled ? "Activo" : "Inactivo"}
-                </span>
-              </div>
-              {m.details ? (
-                <p className="mt-2 text-sm text-slate-400 whitespace-pre-wrap">{m.details}</p>
-              ) : null}
-              <div className="mt-4 flex items-center gap-2">
-                <form action={togglePaymentMethod.bind(null, m.id, !m.enabled)}>
-                  <button className="rounded-lg border border-slate-700 px-3 py-1.5 text-sm font-semibold text-white hover:bg-slate-800">
-                    {m.enabled ? "Desactivar" : "Activar"}
-                  </button>
-                </form>
-                <form action={deletePaymentMethod.bind(null, m.id)}>
-                  <button className="rounded-lg border border-red-500/30 px-3 py-1.5 text-sm font-semibold text-red-400 hover:bg-red-500/10">
-                    Eliminar
-                  </button>
-                </form>
-              </div>
-            </Card>
+            <EditablePaymentMethod
+              key={m.id}
+              method={m}
+              updateAction={updatePaymentMethod.bind(null, m.id)}
+              toggleAction={togglePaymentMethod.bind(null, m.id, !m.enabled)}
+              deleteAction={deletePaymentMethod.bind(null, m.id)}
+            />
           ))
         )}
       </div>
