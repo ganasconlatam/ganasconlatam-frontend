@@ -13,7 +13,7 @@ export function PrimaryButton({
   return (
     <button
       {...props}
-      className={`bg-[#f8f400] hover:brightness-95 text-slate-900 font-bold px-4 py-2.5 rounded-lg transition-all disabled:opacity-60 ${className}`}
+      className={`bg-[#DEBB17] hover:brightness-95 text-[#0F2A21] font-bold px-4 py-2.5 rounded-lg transition-all disabled:opacity-60 ${className}`}
     >
       {children}
     </button>
