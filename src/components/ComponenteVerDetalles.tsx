@@ -1,11 +1,37 @@
 // 1. ¡Obligatorio! Esto activa la reactividad y las funciones del navegador
 "use client"; 
 
-import { useState } from "react";
 import { HijoProps } from './types'; 
+import { usePurchase, bs } from '@/components/PurchaseContext';
+import { formatUsd } from '@/lib/money';
+
+function formatDrawDate(date: string) {
+  if (!date) return "";
+  const d = new Date(date + "T00:00:00");
+  if (isNaN(d.getTime())) return date;
+  return d.toLocaleDateString("es-VE", { day: "2-digit", month: "2-digit", year: "numeric" });
+}
 
 export default function ComponenteVerDetalles({ cambiarVista }: HijoProps) {
+  const { raffle, loading, setMode, perTicketBs, perTicketUsd } = usePurchase();
 
+  if (loading || !raffle) {
+    return (
+      <main className="flex-grow pb-24">
+        <div className="max-w-7xl mx-auto px-4 py-16">
+          <div className="h-[400px] rounded-2xl bg-slate-900 animate-pulse" />
+        </div>
+      </main>
+    );
+  }
+
+  const progress = Math.max(0, Math.min(100, raffle.progress ?? 0));
+  const imageSrc = raffle.imageUrl && raffle.imageUrl.trim() !== "" ? raffle.imageUrl : "images/4.png";
+
+  const comprar = () => {
+    setMode("azar");
+    cambiarVista("ctusdatos");
+  };
 
   return (
 <main className="flex-grow pb-24">
@@ -41,29 +67,21 @@ export default function ComponenteVerDetalles({ cambiarVista }: HijoProps) {
       <div className="lg:col-span-3 space-y-6">
         <div className="rounded-2xl overflow-hidden shadow-2xl border border-white/10 bg-slate-900 aspect-video relative group">
           <img
-            src="images/4.png"
-            alt="Ganate 15.000 lechugas por tan solo 2499 Bs!"
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-0 transition-opacity duration-300"
+            src={imageSrc || "/placeholder.svg"}
+            alt={raffle.title}
+            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
             width={1000}
-            data-sf-original-src="https://vds-api.rifalotodo.com/uploads/file-1789092955244-421011487.png"
           />
           <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white/80 text-xs px-3 py-1.5 rounded-lg shadow-lg font-mono tracking-wider border border-white/10 z-10 select-none">
-            CNL-AUT-RF-2026-000883
+            {raffle.code}
           </div>
         </div>
         <div className="bg-slate-850 rounded-2xl p-8 border border-white/10 shadow-lg">
           <h2 className="text-2xl font-bold text-white mb-4">
-            Ganate 15.000 lechugas por tan solo 2499 Bs!
+            {raffle.title}
           </h2>
           <div className="prose prose-invert text-white whitespace-pre-wrap">
-            🎉 ¡Rifa de 4 cifras! 10.000 números disponibles 🏆 Premio gordo:
-            \$15.000( 10 PM⏱️ ) 📅 Fecha: 12 de SEPTIEMBRE! 🎯 Resultado:
-            Supergana 4 cifras 🎟️ Precio por número: 2499 bolivares! COMPRA
-            MINIMA 1 NUMERO🛍️ ‼️TIENES TABLA DE NUMERO PARA QUE HAGAS TU
-            COMBINACION DE 4 CIFRAS‼️ Formas de pago del premio: 💵 Efectivo en
-            divisas 🪙 Binance USDT 🟣 Zelle 🏦 Transferencia en bolívares
-            RUNLOT: CNL ORF 2025-000064 Juega con responsabilidad. VALIDO +18
-            AÑOS!
+            {raffle.details}
           </div>
         </div>
       </div>
@@ -99,10 +117,10 @@ export default function ComponenteVerDetalles({ cambiarVista }: HijoProps) {
                   <rect width={18} height={18} x={3} y={4} rx={2} />
                   <path d="M3 10h18" />
                 </svg>{" "}
-                Sortea: 12/09/2026, 10:00 p.&nbsp;m. (Hora Vzla)
+                Sortea: {formatDrawDate(raffle.drawDate)}{raffle.drawTime ? `, ${raffle.drawTime}` : ""} (Hora Vzla)
               </div>
               <h1 className="text-3xl font-bold text-white mb-2 leading-tight drop-shadow-sm">
-                Ganate 15.000 lechugas por tan solo 2499 Bs!
+                {raffle.title}
               </h1>
               <p className="text-white mb-8 text-sm leading-relaxed">
                 ¡No pierdas esta oportunidad única! Participa ahora y gana
@@ -111,13 +129,13 @@ export default function ComponenteVerDetalles({ cambiarVista }: HijoProps) {
               <div className="space-y-2 mb-8">
                 <div className="flex justify-between text-sm font-bold">
                   <span className="text-white">Boletos vendido</span>
-                  <span className="text-white">29.85%</span>
+                  <span className="text-white">{progress.toFixed(2)}%</span>
                 </div>
                 <div className="h-3 rounded-full overflow-hidden border border-white/10 bg-white/10 progress-container">
                   <div
                     className="h-full rounded-full progress-striped animate-pulse-green"
                     style={{
-                      width: "29.85%",
+                      width: `${progress}%`,
                       transition: "width 1s ease-out 0s",
                       backgroundColor: "var(--color-primary)",
                       backgroundImage:
@@ -127,11 +145,13 @@ export default function ComponenteVerDetalles({ cambiarVista }: HijoProps) {
                 </div>
               </div>
               <div className="flex flex-col gap-3 mb-6">
-                <button className="w-full py-4 rounded-xl font-bold flex flex-col items-center justify-center transition-transform active:scale-95 shadow-lg bg-[var(--color-primary)] hover:brightness-110 text-slate-900 btn-premium">
+                <button
+                  onClick={comprar}
+                  className="w-full py-4 rounded-xl font-bold flex flex-col items-center justify-center transition-transform active:scale-95 shadow-lg bg-[var(--color-primary)] hover:brightness-110 text-slate-900 btn-premium">
                   <span className="flex items-center gap-2 text-lg">
                     Comprar Boletos
                   </span>
-                  <span className="text-xs opacity-80">$2.60 / Bs 2499</span>
+                  <span className="text-xs opacity-80">{formatUsd(perTicketUsd)} / {bs(perTicketBs)}</span>
                 </button>
               </div>
               <div className="flex gap-3">
