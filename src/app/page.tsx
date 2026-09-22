@@ -16,6 +16,7 @@ import ComponenteConsultarCTickets from '@/components/ComponenteConsultarCTicket
 import ComponenteConsultarCTResultados from '@/components/ComponenteConsultarCTResultados';
 
 import ComponenteFichaRifa from '@/components/ComponenteFichaRifa';
+import ComponenteTopCompradores from '@/components/ComponenteTopCompradores';
 
 import ComponenteAccessAdmin from '@/components/ComponenteAccessAdmin';
 import { PurchaseProvider } from '@/components/PurchaseContext';
@@ -157,6 +158,9 @@ export default function NavegacionInterna() {
 
       
       
+      {/* Top Compradores (gestionado desde el panel admin: /admin/top) */}
+      <ComponenteTopCompradores />
+
       {/* Últimas Rifas */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-24">
         <div className="flex justify-between items-end mb-8 relative z-10">
