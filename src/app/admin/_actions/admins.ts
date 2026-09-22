@@ -4,6 +4,12 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
+import { isValidEmail } from "@/lib/safe";
+
+const VALID_ROLES = ["admin", "superadmin"] as const;
+function normalizeRole(role: string): string {
+  return (VALID_ROLES as readonly string[]).includes(role) ? role : "admin";
+}
 
 export async function getAdmins() {
   return prisma.admin.findMany({
@@ -17,9 +23,11 @@ export async function createAdmin(formData: FormData) {
   const email = String(formData.get("email") ?? "").toLowerCase().trim();
   const password = String(formData.get("password") ?? "");
   const name = String(formData.get("name") ?? "").trim();
-  const role = String(formData.get("role") ?? "admin");
+  const role = normalizeRole(String(formData.get("role") ?? "admin"));
 
   if (!email || !password) return { error: "Correo y contraseña requeridos" };
+  if (!isValidEmail(email)) return { error: "El correo electrónico no es válido" };
+  if (password.length < 8) return { error: "La contraseña debe tener al menos 8 caracteres" };
 
   const exists = await prisma.admin.findUnique({ where: { email } });
   if (exists) return { error: "Ya existe un usuario con ese correo" };
@@ -34,8 +42,11 @@ export async function createAdmin(formData: FormData) {
 export async function updateAdmin(id: string, formData: FormData) {
   await requireAdmin();
   const name = String(formData.get("name") ?? "").trim();
-  const role = String(formData.get("role") ?? "admin");
+  const role = normalizeRole(String(formData.get("role") ?? "admin"));
   const password = String(formData.get("password") ?? "");
+
+  if (password && password.length < 8)
+    return { error: "La contraseña debe tener al menos 8 caracteres" };
 
   const data: { name: string; role: string; password?: string } = { name, role };
   if (password) data.password = await bcrypt.hash(password, 10);

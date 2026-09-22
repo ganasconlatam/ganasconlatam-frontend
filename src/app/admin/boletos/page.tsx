@@ -1,5 +1,6 @@
 import { getOrders, approveOrder, rejectOrder, deleteOrder } from "@/app/admin/_actions/orders";
 import { PageHeader, StatusBadge } from "@/components/admin/ui";
+import { safeHref } from "@/lib/safe";
 
 export const dynamic = "force-dynamic";
 
@@ -79,18 +80,18 @@ function OrderCard({ order: o, pending = false }: { order: any; pending?: boolea
         </div>
       </div>
 
-      {o.proofUrl ? (
+      {safeHref(o.proofUrl) ? (
         <div className="mt-3">
           <p className="text-xs font-bold text-slate-400 uppercase mb-1">Comprobante de pago</p>
           <a
-            href={o.proofUrl}
+            href={safeHref(o.proofUrl)}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-block"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={o.proofUrl || "/placeholder.svg"}
+              src={safeHref(o.proofUrl) || "/placeholder.svg"}
               alt="Comprobante de pago"
               className="h-32 rounded-lg border border-slate-700 object-cover hover:border-[#f8f400]"
             />

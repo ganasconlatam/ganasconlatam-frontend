@@ -2,10 +2,20 @@ import { SignJWT, jwtVerify } from "jose";
 
 // Módulo compartido (edge-safe) para firmar/verificar el token de sesión.
 // No importa next/headers, por lo que puede usarse en middleware y en el server.
+// Secreto dedicado para firmar sesiones. NUNCA reutilizar DATABASE_URL
+// (filtraría credenciales de BD al material del token) ni un literal en producción.
 const secretValue =
   process.env.AUTH_SECRET ||
-  process.env.DATABASE_URL ||
-  "ganasconlatam-dev-secret-change-me";
+  process.env.BETTER_AUTH_SECRET ||
+  (process.env.NODE_ENV === "production"
+    ? ""
+    : "ganasconlatam-dev-only-insecure-secret");
+
+if (!secretValue) {
+  throw new Error(
+    "AUTH_SECRET no está configurado. Genera uno con `openssl rand -base64 32` y añádelo a las variables de entorno del proyecto.",
+  );
+}
 
 const secret = new TextEncoder().encode(secretValue);
 

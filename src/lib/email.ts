@@ -1,4 +1,5 @@
 import "server-only";
+import { escapeHtml } from "@/lib/safe";
 
 // Envío de correos. Usa Resend si RESEND_API_KEY está configurado.
 // Si no está configurado, registra el correo en consola (modo desarrollo)
@@ -39,10 +40,12 @@ export async function sendEmail({ to, subject, html }: SendArgs): Promise<{ ok: 
 }
 
 export function emailVerificacionPago(nombre: string, rifa: string): string {
+  const n = escapeHtml(nombre);
+  const r = escapeHtml(rifa);
   return `
     <div style="font-family:sans-serif;max-width:520px;margin:auto">
-      <h2 style="color:#111">Hola ${nombre},</h2>
-      <p>Hemos recibido tu compra para la rifa <strong>${rifa}</strong>.</p>
+      <h2 style="color:#111">Hola ${n},</h2>
+      <p>Hemos recibido tu compra para la rifa <strong>${r}</strong>.</p>
       <p>Tu pago está <strong>en proceso de verificación</strong>. Te notificaremos por este medio
       cuando sea aprobado y tus boletos queden confirmados.</p>
       <p style="color:#666;font-size:13px">Gracias por participar — Ganas con Latam</p>
@@ -50,11 +53,14 @@ export function emailVerificacionPago(nombre: string, rifa: string): string {
 }
 
 export function emailPagoAprobado(nombre: string, rifa: string, numeros: string): string {
+  const n = escapeHtml(nombre);
+  const r = escapeHtml(rifa);
+  const nums = escapeHtml(numeros);
   return `
     <div style="font-family:sans-serif;max-width:520px;margin:auto">
-      <h2 style="color:#111">¡Felicidades ${nombre}!</h2>
-      <p>Tu pago para la rifa <strong>${rifa}</strong> ha sido <strong>aprobado</strong>.</p>
-      ${numeros ? `<p>Tus números: <strong>${numeros}</strong></p>` : ""}
+      <h2 style="color:#111">¡Felicidades ${n}!</h2>
+      <p>Tu pago para la rifa <strong>${r}</strong> ha sido <strong>aprobado</strong>.</p>
+      ${nums ? `<p>Tus números: <strong>${nums}</strong></p>` : ""}
       <p>¡Mucha suerte en el sorteo!</p>
       <p style="color:#666;font-size:13px">Ganas con Latam</p>
     </div>`;

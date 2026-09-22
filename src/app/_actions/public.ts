@@ -6,6 +6,7 @@ import { usdToBs } from "@/lib/money";
 import { sendEmail, emailVerificacionPago } from "@/lib/email";
 
 import { ticketPad } from "@/lib/money";
+import { safeHref, isValidEmail, MAX_PROOF_CHARS } from "@/lib/safe";
 
 const ACTIVE_TAKEN = ["PENDIENTE", "APROBADO"] as const;
 
@@ -76,6 +77,22 @@ export interface CreateOrderResult {
 export async function createOrder(input: CreateOrderInput): Promise<CreateOrderResult> {
   const name = input.buyerName?.trim();
   if (!name) return { ok: false, error: "El nombre es obligatorio." };
+  if (name.length > 120) return { ok: false, error: "El nombre es demasiado largo." };
+
+  const email = input.buyerEmail?.trim() ?? "";
+  if (email && !isValidEmail(email))
+    return { ok: false, error: "El correo electrónico no es válido." };
+
+  // Sanear el comprobante: solo se aceptan imágenes (data:image/*) o enlaces http(s),
+  // con un límite de tamaño para evitar payloads abusivos.
+  const proofRaw = input.proofUrl?.trim() ?? "";
+  if (proofRaw) {
+    if (proofRaw.length > MAX_PROOF_CHARS)
+      return { ok: false, error: "El comprobante supera el tamaño máximo permitido (4 MB)." };
+    if (!safeHref(proofRaw))
+      return { ok: false, error: "El comprobante no tiene un formato de imagen válido." };
+  }
+  const proofUrl = safeHref(proofRaw) ?? "";
 
   const raffle = await prisma.raffle.findUnique({ where: { id: input.raffleId } });
   if (!raffle) return { ok: false, error: "La rifa no existe." };
@@ -126,37 +143,58 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
   const amountUsd = Math.round(raffle.priceUsd * qty * 100) / 100;
   const amountBs = usdToBs(amountUsd, config.dollarRate);
 
-  let participantId: string | undefined;
-  if (input.buyerCedula?.trim() || input.buyerEmail?.trim()) {
-    const participant = await prisma.participant.create({
-      data: {
-        name,
-        email: input.buyerEmail?.trim() ?? "",
-        phone: input.buyerPhone?.trim() ?? "",
-        cedula: input.buyerCedula?.trim() ?? "",
-      },
-    });
-    participantId = participant.id;
-  }
+  // Revalidar disponibilidad y crear la orden dentro de una transacción para
+  // reducir la ventana de doble venta cuando dos compradores eligen el mismo número.
+  try {
+    await prisma.$transaction(async (tx) => {
+      const current = await tx.ticketOrder.findMany({
+        where: { raffleId: raffle.id, status: { in: [...ACTIVE_TAKEN] } },
+        select: { ticketNumbers: true },
+      });
+      const takenNow = new Set(current.flatMap((o) => splitNumbers(o.ticketNumbers)));
+      const conflict = numbers.find((n) => takenNow.has(n));
+      if (conflict) {
+        throw new Error(`El número ${conflict} ya no está disponible.`);
+      }
 
-  await prisma.ticketOrder.create({
-    data: {
-      raffleId: raffle.id,
-      participantId,
-      buyerName: name,
-      buyerEmail: input.buyerEmail?.trim() ?? "",
-      buyerPhone: input.buyerPhone?.trim() ?? "",
-      buyerCedula: input.buyerCedula?.trim() ?? "",
-      ticketCount: qty,
-      ticketNumbers: numbers.join(","),
-      amountUsd,
-      amountBs,
-      paymentMethodId: input.paymentMethodId || null,
-      reference: input.reference?.trim() ?? "",
-      proofUrl: input.proofUrl?.trim() ?? "",
-      status: "PENDIENTE",
-    },
-  });
+      let participantId: string | undefined;
+      if (input.buyerCedula?.trim() || email) {
+        const participant = await tx.participant.create({
+          data: {
+            name,
+            email,
+            phone: input.buyerPhone?.trim() ?? "",
+            cedula: input.buyerCedula?.trim() ?? "",
+          },
+        });
+        participantId = participant.id;
+      }
+
+      await tx.ticketOrder.create({
+        data: {
+          raffleId: raffle.id,
+          participantId,
+          buyerName: name,
+          buyerEmail: email,
+          buyerPhone: input.buyerPhone?.trim() ?? "",
+          buyerCedula: input.buyerCedula?.trim() ?? "",
+          ticketCount: qty,
+          ticketNumbers: numbers.join(","),
+          amountUsd,
+          amountBs,
+          paymentMethodId: input.paymentMethodId || null,
+          reference: input.reference?.trim().slice(0, 200) ?? "",
+          proofUrl,
+          status: "PENDIENTE",
+        },
+      });
+    });
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "No se pudo procesar la compra.",
+    };
+  }
 
   if (input.buyerEmail?.trim()) {
     await sendEmail({
