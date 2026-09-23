@@ -66,6 +66,16 @@ interface PurchaseContextValue {
   proofUrl: string;
   setProofUrl: (v: string) => void;
 
+  // Datos bancarios del emisor del pago
+  senderBank: string;
+  setSenderBank: (v: string) => void;
+  senderHolderIdType: string;
+  setSenderHolderIdType: (v: string) => void;
+  senderHolderId: string;
+  setSenderHolderId: (v: string) => void;
+  senderPhone: string;
+  setSenderPhone: (v: string) => void;
+
   effectiveQty: number;
   perTicketBs: number;
   perTicketUsd: number;
@@ -112,6 +122,10 @@ export function PurchaseProvider({
   const [paymentMethodId, setPaymentMethodId] = useState<string | null>(null);
   const [reference, setReference] = useState("");
   const [proofUrl, setProofUrl] = useState("");
+  const [senderBank, setSenderBank] = useState("");
+  const [senderHolderIdType, setSenderHolderIdType] = useState("V");
+  const [senderHolderId, setSenderHolderId] = useState("");
+  const [senderPhone, setSenderPhone] = useState("");
 
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -187,6 +201,9 @@ export function PurchaseProvider({
       paymentMethodId,
       reference,
       proofUrl,
+      senderBank,
+      senderHolderId: senderHolderId.trim() ? `${senderHolderIdType}-${senderHolderId.trim()}` : "",
+      senderPhone,
     });
     setSubmitting(false);
     if (!res.ok) {
@@ -205,6 +222,10 @@ export function PurchaseProvider({
     paymentMethodId,
     reference,
     proofUrl,
+    senderBank,
+    senderHolderIdType,
+    senderHolderId,
+    senderPhone,
     refreshTaken,
   ]);
 
@@ -240,6 +261,14 @@ export function PurchaseProvider({
       setReference,
       proofUrl,
       setProofUrl,
+      senderBank,
+      setSenderBank,
+      senderHolderIdType,
+      setSenderHolderIdType,
+      senderHolderId,
+      setSenderHolderId,
+      senderPhone,
+      setSenderPhone,
       effectiveQty,
       perTicketBs,
       perTicketUsd,
@@ -272,6 +301,10 @@ export function PurchaseProvider({
       paymentMethodId,
       reference,
       proofUrl,
+      senderBank,
+      senderHolderIdType,
+      senderHolderId,
+      senderPhone,
       effectiveQty,
       perTicketBs,
       perTicketUsd,

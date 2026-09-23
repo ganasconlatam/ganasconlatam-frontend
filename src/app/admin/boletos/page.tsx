@@ -79,6 +79,14 @@ function OrderCard({ order: o, pending = false }: { order: any; pending?: boolea
         <Field label="Monto" value={`$${o.amountUsd?.toFixed?.(2) ?? o.amountUsd} / ${o.amountBs?.toFixed?.(2) ?? o.amountBs} Bs`} />
       </div>
 
+      {(o.senderBank || o.senderHolderId || o.senderPhone) && (
+        <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm border-t border-slate-800 pt-4">
+          <Field label="Banco emisor" value={o.senderBank || "—"} />
+          <Field label="Cédula titular" value={o.senderHolderId || "—"} />
+          <Field label="Teléfono emisor" value={o.senderPhone || "—"} />
+        </div>
+      )}
+
       <div className="mt-3">
         <p className="text-xs font-bold text-slate-400 uppercase mb-1">Boletos</p>
         <div className="flex flex-wrap gap-1.5">

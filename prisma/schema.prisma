@@ -103,6 +103,11 @@ model TicketOrder {
   buyerPhone   String  @default("")
   buyerCedula  String  @default("")
 
+  // Datos bancarios del emisor del pago (sección "Tus datos bancarios")
+  senderBank     String @default("") // Banco desde el que se hizo el pago
+  senderHolderId String @default("") // Cédula del titular de la cuenta (ej. V-12345678)
+  senderPhone    String @default("") // Teléfono emisor (pago móvil)
+
   ticketCount   Int      @default(1)
   ticketNumbers String   @default("") // números asignados, separados por coma
   amountUsd     Float    @default(0)

@@ -92,6 +92,9 @@ export interface CreateOrderInput {
   paymentMethodId?: string | null;
   reference?: string;
   proofUrl?: string;
+  senderBank?: string;
+  senderHolderId?: string;
+  senderPhone?: string;
 }
 
 export interface CreateOrderResult {
@@ -214,6 +217,9 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
           paymentMethodId: input.paymentMethodId || null,
           reference: input.reference?.trim().slice(0, 200) ?? "",
           proofUrl,
+          senderBank: input.senderBank?.trim().slice(0, 120) ?? "",
+          senderHolderId: input.senderHolderId?.trim().slice(0, 40) ?? "",
+          senderPhone: input.senderPhone?.trim().slice(0, 40) ?? "",
           status: "PENDIENTE",
         },
       });
