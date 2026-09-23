@@ -10,6 +10,7 @@ import {
 } from "react";
 import {
   getStorefront,
+  getStorefrontByCode,
   getTakenNumbers,
   createOrder,
   consultTickets,
@@ -91,7 +92,15 @@ export function usePurchase(): PurchaseContextValue {
   return ctx;
 }
 
-export function PurchaseProvider({ children }: { children: React.ReactNode }) {
+export function PurchaseProvider({
+  children,
+  initialCode,
+}: {
+  children: React.ReactNode;
+  // Cuando se accede a una rifa por su enlace único (/rifa/[code]), carga esa
+  // rifa específica en lugar de la rifa activa global.
+  initialCode?: string;
+}) {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<Storefront | null>(null);
   const [takenNumbers, setTakenNumbers] = useState<string[]>([]);
@@ -113,7 +122,9 @@ export function PurchaseProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let active = true;
-    getStorefront()
+    setLoading(true);
+    const loader = initialCode ? getStorefrontByCode(initialCode) : getStorefront();
+    loader
       .then((res) => {
         if (!active) return;
         setData(res);
@@ -124,7 +135,7 @@ export function PurchaseProvider({ children }: { children: React.ReactNode }) {
     return () => {
       active = false;
     };
-  }, []);
+  }, [initialCode]);
 
   const raffle = data?.activeRaffle ?? null;
   const config = data?.config ?? null;

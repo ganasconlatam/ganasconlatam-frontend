@@ -1,6 +1,7 @@
 // 1. ¡Obligatorio! Esto activa la reactividad y las funciones del navegador
 "use client"; 
 
+import { useState } from 'react';
 import { HijoProps } from './types'; 
 import { usePurchase, bs } from '@/components/PurchaseContext';
 import { formatUsd } from '@/lib/money';
@@ -14,6 +15,7 @@ function formatDrawDate(date: string) {
 
 export default function ComponenteVerDetalles({ cambiarVista }: HijoProps) {
   const { raffle, loading, setMode, perTicketBs, perTicketUsd } = usePurchase();
+  const [copied, setCopied] = useState(false);
 
   if (loading || !raffle) {
     return (
@@ -31,6 +33,51 @@ export default function ComponenteVerDetalles({ cambiarVista }: HijoProps) {
   const comprar = () => {
     setMode("azar");
     cambiarVista("ctusdatos");
+  };
+
+  // Enlace único de esta rifa: dominio actual + código identificador.
+  // Al abrirse, /rifa/[code] carga esta misma sección con la imagen, título,
+  // descripción y precio de esta rifa específica.
+  const shareUrl =
+    typeof window !== "undefined" ? `${window.location.origin}/rifa/${raffle.code}` : "";
+
+  const compartir = async () => {
+    const shareData = {
+      title: raffle.title,
+      text: `¡Participa en "${raffle.title}"! ${raffle.details ?? ""}`.trim(),
+      url: shareUrl,
+    };
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share(shareData);
+        return;
+      } catch {
+        // El usuario canceló el share nativo o no está soportado; caemos al copiado.
+      }
+    }
+    await copiarEnlace();
+  };
+
+  const copiarEnlace = async () => {
+    try {
+      if (typeof navigator !== "undefined" && navigator.clipboard) {
+        await navigator.clipboard.writeText(shareUrl);
+      } else {
+        throw new Error("clipboard no disponible");
+      }
+    } catch {
+      // Fallback para navegadores sin permiso/soporte de clipboard.
+      const textarea = document.createElement("textarea");
+      textarea.value = shareUrl;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
@@ -155,7 +202,11 @@ export default function ComponenteVerDetalles({ cambiarVista }: HijoProps) {
                 </button>
               </div>
               <div className="flex gap-3">
-                <button className="flex-1 rounded-xl font-bold border border-white text-white hover:bg-white/10 flex items-center justify-center text-sm gap-2 py-3">
+                <button
+                  type="button"
+                  onClick={compartir}
+                  className="flex-1 rounded-xl font-bold border border-white text-white hover:bg-white/10 flex items-center justify-center text-sm gap-2 py-3 transition-colors active:scale-95"
+                >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     width={18}
@@ -176,23 +227,49 @@ export default function ComponenteVerDetalles({ cambiarVista }: HijoProps) {
                   </svg>{" "}
                   Compartir
                 </button>
-                <button className="flex-1 rounded-xl font-bold border border-white text-white hover:bg-white/10 flex items-center justify-center text-sm gap-2 py-3">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width={18}
-                    height={18}
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="lucide lucide-link"
-                  >
-                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-                  </svg>{" "}
-                  Copiar
+                <button
+                  type="button"
+                  onClick={copiarEnlace}
+                  className="flex-1 rounded-xl font-bold border border-white text-white hover:bg-white/10 flex items-center justify-center text-sm gap-2 py-3 transition-colors active:scale-95"
+                >
+                  {copied ? (
+                    <>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width={18}
+                        height={18}
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="lucide lucide-check text-[var(--color-primary)]"
+                      >
+                        <path d="M20 6 9 17l-5-5" />
+                      </svg>{" "}
+                      ¡Copiado!
+                    </>
+                  ) : (
+                    <>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width={18}
+                        height={18}
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="lucide lucide-link"
+                      >
+                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                      </svg>{" "}
+                      Copiar
+                    </>
+                  )}
                 </button>
               </div>
               <a

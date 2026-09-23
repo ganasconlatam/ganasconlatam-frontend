@@ -52,6 +52,35 @@ export async function getTakenNumbers(raffleId: string): Promise<string[]> {
   return [...(await getTakenSet(raffleId))];
 }
 
+// Datos de una rifa específica accedida por su código único (enlace compartido).
+// Devuelve la misma forma que getStorefront para poder reutilizar el mismo contexto.
+export async function getStorefrontByCode(code: string) {
+  const [config, raffle, paymentMethods, socialLinks, top] = await Promise.all([
+    prisma.siteConfig.upsert({ where: { id: 1 }, update: {}, create: { id: 1 } }),
+    prisma.raffle.findUnique({ where: { code: code.trim() } }),
+    prisma.paymentMethod.findMany({ where: { enabled: true }, orderBy: { order: "asc" } }),
+    prisma.socialLink.findMany({ where: { enabled: true }, orderBy: { order: "asc" } }),
+    prisma.topPurchase.findMany({ orderBy: { position: "asc" } }),
+  ]);
+
+  const takenNumbers = raffle ? [...(await getTakenSet(raffle.id))] : [];
+
+  return {
+    config,
+    activeRaffle: raffle,
+    paymentMethods,
+    socialLinks,
+    top,
+    takenNumbers,
+  };
+}
+
+// Verifica si existe una rifa con ese código (para la ruta de enlace compartido).
+export async function raffleExistsByCode(code: string): Promise<boolean> {
+  const raffle = await prisma.raffle.findUnique({ where: { code: code.trim() }, select: { id: true } });
+  return !!raffle;
+}
+
 export interface CreateOrderInput {
   raffleId: string;
   buyerName: string;
