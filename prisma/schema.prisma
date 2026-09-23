@@ -73,12 +73,13 @@ model Participant {
 }
 
 model PaymentMethod {
-  id      String  @id @default(cuid())
-  name    String // Pago Móvil, Zelle, Binance, etc.
-  type    String  @default("otro")
-  details String  @default("") // Datos: teléfono, banco, correo, etc.
-  enabled Boolean @default(true)
-  order   Int     @default(0)
+  id       String  @id @default(cuid())
+  name     String // Pago Móvil, Zelle, Binance, etc.
+  type     String  @default("otro")
+  details  String  @default("") // Datos: teléfono, banco, correo, etc.
+  imageUrl String  @default("") // Ícono/logo del método, guardado como blob (data URL)
+  enabled  Boolean @default(true)
+  order    Int     @default(0)
 
   orders TicketOrder[]
 }

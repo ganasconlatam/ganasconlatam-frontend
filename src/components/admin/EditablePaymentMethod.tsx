@@ -3,11 +3,14 @@
 import { useState } from "react";
 import { Card, inputCls, labelCls } from "./ui";
 
+const MAX_ICON_BYTES = 800_000; // ~800KB para el ícono/logo del método
+
 type PaymentMethod = {
   id: string;
   name: string;
   type: string;
   details: string | null;
+  imageUrl?: string | null;
   enabled: boolean;
   order: number;
 };
@@ -24,6 +27,22 @@ export function EditablePaymentMethod({
   deleteAction: () => Promise<void>;
 }) {
   const [editing, setEditing] = useState(false);
+  const [imageUrl, setImageUrl] = useState(method.imageUrl || "");
+  const [imageError, setImageError] = useState<string | null>(null);
+
+  const onFile = (file: File | null) => {
+    if (!file) return;
+    if (file.size > MAX_ICON_BYTES) {
+      setImageError("La imagen es muy pesada (máx. 800KB). Usa una imagen más liviana.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setImageUrl(String(reader.result));
+      setImageError(null);
+    };
+    reader.readAsDataURL(file);
+  };
 
   if (editing) {
     return (
@@ -52,6 +71,41 @@ export function EditablePaymentMethod({
           <div className="md:col-span-2">
             <label className={labelCls}>Detalles</label>
             <textarea name="details" rows={2} defaultValue={method.details || ""} className={inputCls} />
+          </div>
+          <div className="md:col-span-2">
+            <label className={labelCls}>Ícono / logo del método</label>
+            <input type="hidden" name="imageUrl" value={imageUrl} />
+            <div className="flex items-center gap-3">
+              <label className="relative overflow-hidden shrink-0 w-16 h-16 rounded-lg border-2 border-dashed border-slate-700 hover:border-[#f8f400]/50 bg-slate-950 flex items-center justify-center cursor-pointer">
+                <input
+                  type="file"
+                  className="hidden"
+                  accept="image/*"
+                  onChange={(e) => onFile(e.target.files?.[0] ?? null)}
+                />
+                {imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={imageUrl} alt="Ícono" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-[10px] text-slate-500 text-center px-1">Subir</span>
+                )}
+              </label>
+              <div className="flex-1 space-y-1">
+                <p className="text-xs text-slate-500">Se sube desde tu ordenador y se guarda en la base de datos.</p>
+                {imageUrl ? (
+                  <label className="flex items-center gap-2 text-xs text-slate-400">
+                    <input
+                      type="checkbox"
+                      name="removeImage"
+                      onChange={(e) => e.target.checked && setImageUrl("")}
+                      className="accent-[#f8f400] w-3.5 h-3.5"
+                    />
+                    Quitar imagen actual
+                  </label>
+                ) : null}
+                {imageError ? <p className="text-xs text-rose-400">{imageError}</p> : null}
+              </div>
+            </div>
           </div>
           <div>
             <label className={labelCls}>Orden</label>
@@ -84,9 +138,17 @@ export function EditablePaymentMethod({
   return (
     <Card>
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <h3 className="font-bold text-white">{method.name}</h3>
-          <p className="text-xs uppercase text-slate-500">{method.type}</p>
+        <div className="flex items-center gap-3">
+          {method.imageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={method.imageUrl} alt={method.name} className="w-10 h-10 rounded-lg object-cover border border-slate-700 shrink-0" />
+          ) : (
+            <div className="w-10 h-10 rounded-lg bg-slate-800 border border-slate-700 shrink-0" />
+          )}
+          <div>
+            <h3 className="font-bold text-white">{method.name}</h3>
+            <p className="text-xs uppercase text-slate-500">{method.type}</p>
+          </div>
         </div>
         <span
           className={`rounded-full px-2 py-0.5 text-xs font-semibold ${

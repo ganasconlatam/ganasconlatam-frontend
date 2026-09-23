@@ -50,12 +50,13 @@ export default function ComponenteCMetodoDePago({ cambiarVista }: HijoProps) {
   const confirmar = async () => {
     setLocalError(null);
     if (!paymentMethodId) return setLocalError("Selecciona un método de pago.");
-    if (reference.trim().length < 4) return setLocalError("Ingresa la referencia del pago.");
+    if (!/^\d{6}$/.test(reference.trim())) return setLocalError("La referencia debe tener exactamente 6 números.");
     const ok = await submit();
     if (ok) cambiarVista("cpagoenrevision");
   };
 
   const error = localError ?? submitError;
+  const selectedMethod = paymentMethods.find((m) => m.id === paymentMethodId) ?? null;
 
   return (
     <div className="relative -mt-10 md:-mt-16">
@@ -81,23 +82,13 @@ export default function ComponenteCMetodoDePago({ cambiarVista }: HijoProps) {
             Método de Pago
           </h2>
 
-          {/* Resumen del monto */}
-          <div className="bg-slate-900/70 border border-[var(--color-primary)]/30 rounded-2xl p-5 mb-6 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                {effectiveQty} {effectiveQty === 1 ? "boleto" : "boletos"} · Total a pagar
-              </p>
-              <p className="text-3xl font-black text-white leading-tight">{bs(totalBs)}</p>
-            </div>
-            <span className="text-sm font-bold text-[var(--color-primary)]">
-              {formatUsd(totalUsd)}
-            </span>
-          </div>
-
           {/* Métodos de pago disponibles */}
-          <div className="space-y-3 mb-6">
+          <p className="text-xs font-bold text-slate-500 uppercase tracking-wider text-center mb-3">
+            Selecciona tu método de pago
+          </p>
+          <div className="grid grid-cols-2 gap-3 mb-6">
             {paymentMethods.length === 0 && (
-              <p className="text-sm text-slate-400 text-center">
+              <p className="col-span-2 text-sm text-slate-400 text-center">
                 No hay métodos de pago configurados todavía.
               </p>
             )}
@@ -109,32 +100,58 @@ export default function ComponenteCMetodoDePago({ cambiarVista }: HijoProps) {
                   type="button"
                   onClick={() => setPaymentMethodId(m.id)}
                   className={
-                    "w-full text-left p-4 rounded-2xl border transition-all " +
+                    "relative flex flex-col items-center gap-2 rounded-2xl border p-4 transition-all " +
                     (active
-                      ? "bg-[var(--color-primary)]/10 border-[var(--color-primary)]"
+                      ? "bg-[var(--color-primary)]/10 border-[var(--color-primary)] shadow-[0_0_20px_rgba(234,179,8,0.15)]"
                       : "bg-slate-900/50 border-white/10 hover:border-white/30")
                   }
                 >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-black text-white uppercase text-sm tracking-wide">
-                      {m.name}
+                  {active && (
+                    <span className="absolute top-2 right-2 w-4 h-4 rounded-full bg-[var(--color-primary)] flex items-center justify-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M20 6 9 17l-5-5" />
+                      </svg>
                     </span>
-                    <span
-                      className={
-                        "w-4 h-4 rounded-full border-2 shrink-0 " +
-                        (active ? "border-[var(--color-primary)] bg-[var(--color-primary)]" : "border-slate-600")
-                      }
-                    />
-                  </div>
-                  {m.details && (
-                    <p className="mt-2 text-sm text-slate-300 font-mono whitespace-pre-line break-words">
-                      {m.details}
-                    </p>
                   )}
+                  {m.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={m.imageUrl} alt={m.name} className="w-10 h-10 rounded-lg object-cover" />
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" width={28} height={28} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="text-[var(--color-primary)]">
+                      <rect width={20} height={14} x={2} y={5} rx={2} />
+                      <line x1={2} x2={22} y1={10} y2={10} />
+                    </svg>
+                  )}
+                  <span className="font-black text-white uppercase text-xs tracking-wide text-center leading-tight">
+                    {m.name}
+                  </span>
                 </button>
               );
             })}
           </div>
+
+          {/* Resumen del monto */}
+          <div className="bg-slate-900/70 border border-[var(--color-primary)]/30 rounded-2xl p-6 mb-6 flex flex-col items-center text-center">
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+              {effectiveQty} {effectiveQty === 1 ? "boleto" : "boletos"} · Total a pagar
+            </p>
+            <p className="text-4xl font-black text-white leading-tight mt-1">{bs(totalBs)}</p>
+            <span className="text-sm font-bold text-[var(--color-primary)] mt-1">
+              {formatUsd(totalUsd)}
+            </span>
+          </div>
+
+          {/* Datos del método seleccionado, para copiar */}
+          {selectedMethod?.details && (
+            <div className="bg-slate-900/50 border border-white/10 rounded-2xl p-4 mb-6">
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                Datos para el pago · {selectedMethod.name}
+              </p>
+              <p className="text-sm text-slate-200 font-mono whitespace-pre-line break-words">
+                {selectedMethod.details}
+              </p>
+            </div>
+          )}
 
           {/* Referencia y comprobante */}
           <div className="space-y-4 mb-8 bg-slate-900/50 p-5 rounded-2xl border border-white/5">
