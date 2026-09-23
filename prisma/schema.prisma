@@ -76,7 +76,8 @@ model PaymentMethod {
   id       String  @id @default(cuid())
   name     String // Pago Móvil, Zelle, Binance, etc.
   type     String  @default("otro")
-  details  String  @default("") // Datos: teléfono, banco, correo, etc.
+  details  String  @default("") // Versión de texto (compatibilidad); se genera desde fields
+  fields   Json    @default("[]") // Pares {label, value} dinámicos: correo, teléfono, banco, etc.
   imageUrl String  @default("") // Ícono/logo del método, guardado como blob (data URL)
   enabled  Boolean @default(true)
   order    Int     @default(0)

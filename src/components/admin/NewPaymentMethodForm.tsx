@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Card, inputCls, labelCls, PrimaryButton } from "./ui";
+import { PaymentFieldsEditor } from "./PaymentFieldsEditor";
 
 const MAX_ICON_BYTES = 800_000; // ~800KB para el ícono/logo del método
 
@@ -51,10 +52,7 @@ export function NewPaymentMethodForm({
             <option value="otro">Otro</option>
           </select>
         </div>
-        <div className="md:col-span-2">
-          <label className={labelCls}>Detalles (datos de la cuenta)</label>
-          <textarea name="details" rows={2} className={inputCls} placeholder="Banco, teléfono, cédula, correo..." />
-        </div>
+        <PaymentFieldsEditor name="fields" initial={[]} />
         <div className="md:col-span-2">
           <label className={labelCls}>Ícono / logo del método</label>
           <input type="hidden" name="imageUrl" value={imageUrl} />

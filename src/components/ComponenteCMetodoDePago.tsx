@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { HijoProps } from './types';
 import { usePurchase, bs } from './PurchaseContext';
 import { formatUsd } from '@/lib/money';
+import { resolvePaymentFields } from '@/lib/payment';
 
 const MAX_PROOF_BYTES = 1_200_000; // ~1.2MB para el comprobante en base64
 const COUNTDOWN_SECONDS = 10 * 60; // temporizador de 10 minutos para completar el pago
@@ -31,22 +32,6 @@ const BANCOS_VE = [
   "Bancamiga",
   "R4 Microfinanciero",
 ];
-
-// Convierte los "details" del método (texto libre) en pares etiqueta/valor
-// para mostrarlos ordenados y con botón de copiar, como en el diseño.
-function parseDetails(details: string): { label: string; value: string }[] {
-  return details
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter(Boolean)
-    .map((line) => {
-      const idx = line.indexOf(":");
-      if (idx > 0) {
-        return { label: line.slice(0, idx).trim(), value: line.slice(idx + 1).trim() };
-      }
-      return { label: "", value: line };
-    });
-}
 
 function mmss(total: number): string {
   const m = Math.floor(total / 60);
@@ -151,7 +136,12 @@ export default function ComponenteCMetodoDePago({ cambiarVista }: HijoProps) {
 
   const error = localError ?? submitError;
   const selectedMethod = paymentMethods.find((m) => m.id === paymentMethodId) ?? null;
-  const details = selectedMethod?.details ? parseDetails(selectedMethod.details) : [];
+  const details = selectedMethod
+    ? resolvePaymentFields(
+        (selectedMethod as { fields?: unknown }).fields,
+        selectedMethod.details,
+      )
+    : [];
 
   return (
     <div className="relative -mt-10 md:-mt-16">

@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { Card, inputCls, labelCls } from "./ui";
+import { PaymentFieldsEditor } from "./PaymentFieldsEditor";
+import { resolvePaymentFields } from "@/lib/payment";
 
 const MAX_ICON_BYTES = 800_000; // ~800KB para el ícono/logo del método
 
@@ -10,6 +12,7 @@ type PaymentMethod = {
   name: string;
   type: string;
   details: string | null;
+  fields?: unknown;
   imageUrl?: string | null;
   enabled: boolean;
   order: number;
@@ -68,10 +71,7 @@ export function EditablePaymentMethod({
               <option value="otro">Otro</option>
             </select>
           </div>
-          <div className="md:col-span-2">
-            <label className={labelCls}>Detalles</label>
-            <textarea name="details" rows={2} defaultValue={method.details || ""} className={inputCls} />
-          </div>
+          <PaymentFieldsEditor name="fields" initial={resolvePaymentFields(method.fields, method.details)} />
           <div className="md:col-span-2">
             <label className={labelCls}>Ícono / logo del método</label>
             <input type="hidden" name="imageUrl" value={imageUrl} />
