@@ -19,6 +19,9 @@ import ComponenteFichaRifa from '@/components/ComponenteFichaRifa';
 import ComponenteTopCompradores from '@/components/ComponenteTopCompradores';
 
 import ComponenteAccessAdmin from '@/components/ComponenteAccessAdmin';
+import FooterSocials from '@/components/FooterSocials';
+import FloatingSupport from '@/components/FloatingSupport';
+import SiteThemeStyles from '@/components/SiteThemeStyles';
 import { PurchaseProvider } from '@/components/PurchaseContext';
 
 export default function NavegacionInterna() {
@@ -64,6 +67,7 @@ export default function NavegacionInterna() {
      
 <PurchaseProvider>
 <div className="min-h-screen w-full max-w-full text-white flex flex-col font-sans relative transition-colors duration-300 selection:bg-[var(--color-primary)] selection:text-white" style={{ '--ColorPrimary': '#f8f400', '--ColorSecondary': '#f4ef00', '--ColorBackground': '#000000FC', '--ColorSurface': '#151f3247', '--ColorText': '#ffffff', '--ColorPrimaryDark': '#f8f400', '--ColorPrimaryForeground': '#000000', 'backgroundColor': 'rgba(0,0,0,0.99)' } as React.CSSProperties}>
+    <SiteThemeStyles />
     <ComponenteConsultarCTResultados
       vistaActiva={vistaActiva} 
       cambiarVista={setVistaActiva} 
@@ -432,21 +436,7 @@ export default function NavegacionInterna() {
             <img src="images/11.png" alt="SUPERGANA" className="h-8 md:h-12 object-contain hover:scale-105 transition-transform duration-300" data-sf-original-src="https://www.ganasconlatam.com/logos/SUPERGANA.png" />
           </div>
         </div>
-        <div className="flex gap-6">
-          <a href="#" target="_blank" rel="noreferrer" className="w-12 h-12 rounded-full bg-slate-900 flex items-center justify-center text-slate-400 hover:bg-[var(--color-primary)] hover:text-slate-900 transition-all hover:-translate-y-1 shadow-lg border border-slate-800 hover:border-transparent">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-instagram">
-              <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
-              <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
-              <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
-            </svg>
-          </a>
-          <a href="#" target="_blank" rel="noreferrer" className="w-12 h-12 rounded-full bg-slate-900 flex items-center justify-center text-slate-400 hover:bg-[var(--color-primary)] hover:text-slate-900 transition-all hover:-translate-y-1 shadow-lg border border-slate-800 hover:border-transparent">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-video">
-              <path d="m22 8-6 4 6 4V8Z" />
-              <rect width="14" height="12" x="2" y="6" rx="2" ry="2" />
-            </svg>
-          </a>
-        </div>
+        <FooterSocials />
       </div>
       <div className="mt-8 pt-8 border-t border-slate-800/50 text-center text-slate-400 text-xs flex flex-col md:flex-row justify-between items-center gap-4">
         <div className="flex flex-col md:flex-row items-center gap-1 md:gap-2">
@@ -467,16 +457,7 @@ export default function NavegacionInterna() {
       </div>
     </div>
   </footer>
-  <a href="#" target="_blank" rel="noreferrer" className="fixed bottom-6 right-6 z-[9998] bg-[#0088cc] hover:bg-[#0077b5] text-white p-4 rounded-full shadow-2xl transition-transform hover:scale-110 flex items-center justify-center group animate-in zoom-in duration-300" title="Contáctanos por Telegram">
-    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-send fill-white text-[#0088cc] ml-0.5">
-      <path d="m22 2-7 20-4-9-9-4Z" />
-      <path d="M22 2 11 13" />
-    </svg>
-    <span className="absolute right-full mr-4 bg-white text-slate-900 px-3 py-1 rounded-lg text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-lg pointer-events-none">
-      ¡Hola!
-          ¿En qué podemos ayudarte?
-    </span>
-  </a>
+  <FloatingSupport />
 </div>
   
   

@@ -31,7 +31,7 @@ export async function getStorefront() {
     prisma.siteConfig.upsert({ where: { id: 1 }, update: {}, create: { id: 1 } }),
     prisma.raffle.findFirst({ where: { status: "ACTIVA" }, orderBy: { createdAt: "desc" } }),
     prisma.paymentMethod.findMany({ where: { enabled: true }, orderBy: { order: "asc" } }),
-    prisma.socialLink.findMany({ where: { enabled: true }, orderBy: { order: "asc" } }),
+    prisma.socialLink.findMany({ orderBy: { order: "asc" } }),
     prisma.topPurchase.findMany({ orderBy: { position: "asc" } }),
   ]);
 
@@ -59,7 +59,7 @@ export async function getStorefrontByCode(code: string) {
     prisma.siteConfig.upsert({ where: { id: 1 }, update: {}, create: { id: 1 } }),
     prisma.raffle.findUnique({ where: { code: code.trim() } }),
     prisma.paymentMethod.findMany({ where: { enabled: true }, orderBy: { order: "asc" } }),
-    prisma.socialLink.findMany({ where: { enabled: true }, orderBy: { order: "asc" } }),
+    prisma.socialLink.findMany({ orderBy: { order: "asc" } }),
     prisma.topPurchase.findMany({ orderBy: { position: "asc" } }),
   ]);
 

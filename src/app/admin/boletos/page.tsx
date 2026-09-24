@@ -105,19 +105,7 @@ function OrderCard({ order: o, pending = false }: { order: any; pending?: boolea
       {safeHref(o.proofUrl) ? (
         <div className="mt-3">
           <p className="text-xs font-bold text-slate-400 uppercase mb-1">Comprobante de pago</p>
-          <a
-            href={safeHref(o.proofUrl)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block"
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={safeHref(o.proofUrl) || "/placeholder.svg"}
-              alt="Comprobante de pago"
-              className="h-32 rounded-lg border border-slate-700 object-cover hover:border-[#f8f400]"
-            />
-          </a>
+          <ProofModal proofUrl={safeHref(o.proofUrl) as string} />
         </div>
       ) : null}
 
