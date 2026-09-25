@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { SOCIAL_PLATFORMS, SOCIAL_ORDER, type SocialPlatform, type SocialsMap } from "@/lib/socials";
 
 export async function getConfig() {
   return prisma.siteConfig.upsert({
@@ -41,16 +42,6 @@ export async function updateColors(formData: FormData) {
 }
 
 // ---- Redes sociales (sección independiente) ----
-// Plataformas gestionadas con un campo fijo cada una:
-// - whatsapp  -> botón "Únete a nuestra comunidad" (página principal)
-// - telegram  -> botón flotante de soporte al cliente
-// - instagram -> ícono del footer
-// - tiktok    -> ícono del footer
-export const SOCIAL_PLATFORMS = ["whatsapp", "telegram", "instagram", "tiktok"] as const;
-export type SocialPlatform = (typeof SOCIAL_PLATFORMS)[number];
-
-export type SocialsMap = Record<SocialPlatform, { url: string; enabled: boolean }>;
-
 export async function getSocials(): Promise<SocialsMap> {
   const links = await prisma.socialLink.findMany();
   const map = Object.fromEntries(
@@ -78,16 +69,10 @@ async function upsertSocial(platform: string, url: string, enabled: boolean, ord
 
 export async function updateSocials(formData: FormData) {
   await requireAdmin();
-  const order: Record<SocialPlatform, number> = {
-    whatsapp: 0,
-    telegram: 1,
-    instagram: 2,
-    tiktok: 3,
-  };
   for (const p of SOCIAL_PLATFORMS) {
     const url = String(formData.get(`${p}_url`) ?? "").trim();
     const enabled = formData.get(`${p}_enabled`) === "on";
-    await upsertSocial(p, url, enabled, order[p]);
+    await upsertSocial(p, url, enabled, SOCIAL_ORDER[p]);
   }
   revalidatePath("/admin/configuracion");
   revalidatePath("/");
