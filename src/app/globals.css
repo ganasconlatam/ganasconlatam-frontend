@@ -3,6 +3,18 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /* Colores del sitio (valores base; se sobrescriben dinámicamente desde el
+     panel administrativo mediante SiteThemeStyles) */
+  --color-primary: #f8f400;
+  --color-primary-dark: #f8f400;
+  --color-primary-rgb: 248, 244, 0;
+  --color-primary-foreground: #000000;
+  --color-secondary: #f4ef00;
+  --color-border-accent: #f8f400;
+  --color-border-accent-rgb: 248, 244, 0;
+  --color-surface: #151f32;
+  --color-progress: #f8f400;
 }
 
 @theme inline {

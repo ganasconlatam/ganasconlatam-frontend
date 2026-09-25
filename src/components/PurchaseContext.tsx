@@ -10,6 +10,7 @@ import {
 } from "react";
 import {
   getStorefront,
+  getStorefrontByCode,
   getTakenNumbers,
   createOrder,
   consultTickets,
@@ -65,6 +66,16 @@ interface PurchaseContextValue {
   proofUrl: string;
   setProofUrl: (v: string) => void;
 
+  // Datos bancarios del emisor del pago
+  senderBank: string;
+  setSenderBank: (v: string) => void;
+  senderHolderIdType: string;
+  setSenderHolderIdType: (v: string) => void;
+  senderHolderId: string;
+  setSenderHolderId: (v: string) => void;
+  senderPhone: string;
+  setSenderPhone: (v: string) => void;
+
   effectiveQty: number;
   perTicketBs: number;
   perTicketUsd: number;
@@ -91,7 +102,15 @@ export function usePurchase(): PurchaseContextValue {
   return ctx;
 }
 
-export function PurchaseProvider({ children }: { children: React.ReactNode }) {
+export function PurchaseProvider({
+  children,
+  initialCode,
+}: {
+  children: React.ReactNode;
+  // Cuando se accede a una rifa por su enlace único (/rifa/[code]), carga esa
+  // rifa específica en lugar de la rifa activa global.
+  initialCode?: string;
+}) {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<Storefront | null>(null);
   const [takenNumbers, setTakenNumbers] = useState<string[]>([]);
@@ -103,6 +122,10 @@ export function PurchaseProvider({ children }: { children: React.ReactNode }) {
   const [paymentMethodId, setPaymentMethodId] = useState<string | null>(null);
   const [reference, setReference] = useState("");
   const [proofUrl, setProofUrl] = useState("");
+  const [senderBank, setSenderBank] = useState("");
+  const [senderHolderIdType, setSenderHolderIdType] = useState("V");
+  const [senderHolderId, setSenderHolderId] = useState("");
+  const [senderPhone, setSenderPhone] = useState("");
 
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -113,7 +136,9 @@ export function PurchaseProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let active = true;
-    getStorefront()
+    setLoading(true);
+    const loader = initialCode ? getStorefrontByCode(initialCode) : getStorefront();
+    loader
       .then((res) => {
         if (!active) return;
         setData(res);
@@ -124,7 +149,7 @@ export function PurchaseProvider({ children }: { children: React.ReactNode }) {
     return () => {
       active = false;
     };
-  }, []);
+  }, [initialCode]);
 
   const raffle = data?.activeRaffle ?? null;
   const config = data?.config ?? null;
@@ -176,6 +201,9 @@ export function PurchaseProvider({ children }: { children: React.ReactNode }) {
       paymentMethodId,
       reference,
       proofUrl,
+      senderBank,
+      senderHolderId: senderHolderId.trim() ? `${senderHolderIdType}-${senderHolderId.trim()}` : "",
+      senderPhone,
     });
     setSubmitting(false);
     if (!res.ok) {
@@ -194,6 +222,10 @@ export function PurchaseProvider({ children }: { children: React.ReactNode }) {
     paymentMethodId,
     reference,
     proofUrl,
+    senderBank,
+    senderHolderIdType,
+    senderHolderId,
+    senderPhone,
     refreshTaken,
   ]);
 
@@ -229,6 +261,14 @@ export function PurchaseProvider({ children }: { children: React.ReactNode }) {
       setReference,
       proofUrl,
       setProofUrl,
+      senderBank,
+      setSenderBank,
+      senderHolderIdType,
+      setSenderHolderIdType,
+      senderHolderId,
+      setSenderHolderId,
+      senderPhone,
+      setSenderPhone,
       effectiveQty,
       perTicketBs,
       perTicketUsd,
@@ -261,6 +301,10 @@ export function PurchaseProvider({ children }: { children: React.ReactNode }) {
       paymentMethodId,
       reference,
       proofUrl,
+      senderBank,
+      senderHolderIdType,
+      senderHolderId,
+      senderPhone,
       effectiveQty,
       perTicketBs,
       perTicketUsd,

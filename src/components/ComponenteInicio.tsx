@@ -3,6 +3,7 @@
 
 import { HijoProps } from './types';
 import { usePurchase, bs } from './PurchaseContext';
+import { safeHref } from '@/lib/safe';
 
 const PRESETS = [1, 2, 5, 10, 20, 50];
 
@@ -18,6 +19,7 @@ export default function ComponenteInicio({ cambiarVista }: HijoProps) {
   } = usePurchase();
 
   const whatsapp = socialLinks.find((s) => s.platform === "whatsapp");
+  const whatsappHref = whatsapp?.enabled ? safeHref(whatsapp.url) : null;
 
   const irAParticipar = () => {
     setMode("azar");
@@ -169,10 +171,10 @@ export default function ComponenteInicio({ cambiarVista }: HijoProps) {
             </button>
           </div>
 
-          {whatsapp && (
+          {whatsappHref && (
             <div className="w-full mb-8 px-2 flex justify-center">
               <a
-                href={whatsapp.url}
+                href={whatsappHref}
                 target="_blank"
                 rel="noreferrer"
                 className="flex items-center justify-between gap-3 sm:gap-4 border backdrop-blur-md rounded-2xl p-2.5 sm:px-4 sm:py-3 transition-all duration-300 w-full max-w-lg cursor-pointer mt-4 relative overflow-hidden group hover:-translate-y-0.5 active:scale-[0.99] bg-gradient-to-r from-emerald-950/40 via-slate-900/80 to-slate-900/90 border-emerald-500/30 hover:border-emerald-400/60 shadow-[0_4px_25px_rgba(16,185,129,0.15)] hover:shadow-[0_4px_30px_rgba(16,185,129,0.3)]"

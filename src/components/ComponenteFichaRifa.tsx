@@ -1,32 +1,57 @@
 // 1. ¡Obligatorio! Esto activa la reactividad y las funciones del navegador
 "use client"; 
 
-import { useState } from "react";
 import { HijoProps } from './types'; 
+import { usePurchase, bs } from '@/components/PurchaseContext';
+import { formatUsd } from '@/lib/money';
 
 interface ComponenteProps extends HijoProps {
   vistaActiva: string;
 }
 
+function formatDrawDate(date: string) {
+  if (!date) return "";
+  const d = new Date(date + "T00:00:00");
+  if (isNaN(d.getTime())) return date;
+  return d.toLocaleDateString("es-VE", { day: "numeric", month: "short", year: "numeric" });
+}
+
 export default function ComponenteFichaRifa({ vistaActiva, cambiarVista }: ComponenteProps) {
+  const { raffle, loading, setMode, perTicketBs, perTicketUsd } = usePurchase();
 
   if (vistaActiva=='verdetalles' || vistaActiva=='iniciopromocion') {
     return '';
   }
+
+  if (loading || !raffle) {
+    return (
+      <div className="flex flex-col relative w-full items-center justify-start overflow-hidden">
+        <div className="relative w-full aspect-video lg:h-[567.8px] bg-slate-900 animate-pulse" />
+      </div>
+    );
+  }
+
+  const progress = Math.max(0, Math.min(100, raffle.progress ?? 0));
+  const imageSrc = raffle.imageUrl && raffle.imageUrl.trim() !== "" ? raffle.imageUrl : "images/2.png";
+
+  const comprar = () => {
+    setMode("azar");
+    cambiarVista("ctusdatos");
+  };
+
   return (
           <div className="flex flex-col relative w-full items-center justify-start overflow-hidden group">     
               <div className="relative w-full aspect-video lg:aspect-auto lg:h-[567.8px] bg-slate-900 overflow-hidden">
                 <div
                   className="absolute inset-0 transition-transform duration-700 group-hover:scale-105"
                   style={{
-                    backgroundImage:
-                      "/* original URL: https://vds-api.rifalotodo.com/uploads/file-1789092955244-421011487.png */url(images/2.png)",
+                    backgroundImage: `url(${imageSrc})`,
                     backgroundSize: "cover",
                     backgroundPosition: "center center"
                   }}
                 ></div>
                 <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white/80 text-xs px-3 py-1.5 rounded-lg shadow-lg font-mono tracking-wider border border-white/10 z-10 select-none">
-                  CNL-AUT-RF-2026-000883
+                  {raffle.code}
                 </div>
                 <div className="absolute inset-x-0 bottom-0 min-h-32 md:min-h-48 bg-gradient-to-t from-slate-900 to-transparent flex flex-col justify-end pb-3 px-0">
                   <div className="w-full max-w-6xl mx-auto px-4 z-40 mb-2 md:mb-4">
@@ -52,14 +77,14 @@ export default function ComponenteFichaRifa({ vistaActiva, cambiarVista }: Compo
                         Vendido
                       </span>
                       <span className="text-xl md:text-2xl font-black text-white leading-none drop-shadow-xl">
-                        3.10%
+                        {progress.toFixed(2)}%
                       </span>
                     </div>
                     <div className="h-3 bg-slate-950/80 rounded-full overflow-hidden border border-white/20 shadow-inner relative progress-container backdrop-blur-sm">
                       <div
                         className="h-full rounded-full progress-striped animate-pulse-green"
                         style={{
-                          width: "3.1%",
+                          width: `${progress}%`,
                           transition: "width 1s ease-out 0s",
                           backgroundColor: "var(--color-primary)",
                           backgroundImage:
@@ -70,7 +95,6 @@ export default function ComponenteFichaRifa({ vistaActiva, cambiarVista }: Compo
                   </div>
                 </div>
                 <div className="absolute top-20 md:top-24 right-4 flex gap-2 z-30" />
-                0
               </div>
               
               <div className="w-full bg-transparent relative z-20 pb-6 border-b border-white/5 shadow-[0_15px_40px_rgba(0,0,0,0.6)]">
@@ -79,7 +103,7 @@ export default function ComponenteFichaRifa({ vistaActiva, cambiarVista }: Compo
                   
                     <div className="space-y-3 lg:space-y-4 flex-1 text-left">
                       <h1 className="text-2xl sm:text-3xl md:text-5xl font-black text-white leading-tight uppercase tracking-tighter drop-shadow-2xl">
-                        Ganate 15.000 lechugas por tan solo 2400 BS!
+                        {raffle.title}
                       </h1>
                       <div className="inline-flex flex-wrap sm:flex-nowrap justify-center md:justify-start items-center gap-2 sm:gap-4 px-5 sm:px-6 py-2.5 sm:py-3 rounded-2xl bg-white/5 backdrop-blur-md border border-white/10 shadow-lg w-auto max-w-full">
                         <div className="flex items-center gap-1.5 shrink-0">
@@ -107,7 +131,7 @@ export default function ComponenteFichaRifa({ vistaActiva, cambiarVista }: Compo
                             <path d="M16 18h.01" />
                           </svg>
                           <span className="text-white font-black text-[11px] sm:text-xs md:text-[13px] tracking-wide uppercase mt-0.5 whitespace-nowrap">
-                            12 sept. 2026
+                            {formatDrawDate(raffle.drawDate)}
                           </span>
                         </div>
                         <div className="w-px h-3.5 sm:h-4 bg-white/15 shrink-0" />
@@ -128,7 +152,7 @@ export default function ComponenteFichaRifa({ vistaActiva, cambiarVista }: Compo
                             <polyline points="12 6 12 12 16 14" />
                           </svg>
                           <span className="text-white font-black text-[11px] sm:text-xs md:text-[13px] tracking-wide uppercase mt-0.5 whitespace-nowrap">
-                            10:00 p.&nbsp;m.
+                            {raffle.drawTime}
                           </span>
                         </div>
                         <div className="w-px h-3.5 sm:h-4 bg-white/15 shrink-0" />
@@ -150,13 +174,13 @@ export default function ComponenteFichaRifa({ vistaActiva, cambiarVista }: Compo
                           </svg>
                           <div className="flex items-center gap-1 sm:gap-1.5 mt-0.5 whitespace-nowrap">
                             <span className="text-white font-black text-xs sm:text-sm md:text-base tracking-wide uppercase">
-                              BS 2499
+                              {bs(perTicketBs)}
                             </span>
                             <span className="text-slate-400 font-medium text-[10px] sm:text-xs">
                               /
                             </span>
                             <span className="text-[#25D366] font-black text-xs sm:text-sm md:text-base tracking-wide uppercase">
-                              2.6 USD
+                              {formatUsd(perTicketUsd)} USD
                             </span>
                           </div>
                         </div>
@@ -168,7 +192,9 @@ export default function ComponenteFichaRifa({ vistaActiva, cambiarVista }: Compo
                         onClick={() => cambiarVista('verdetalles')} >
                         VER DETALLES
                       </button>
-                      <button className="relative overflow-hidden px-6 lg:px-10 py-3.5 rounded-xl font-black text-xs md:text-sm uppercase tracking-widest transition-all group whitespace-nowrap flex-[1.2] lg:flex-none flex justify-center bg-[var(--color-primary)] text-[var(--color-primary-foreground)] shadow-[0_0_35px_rgba(var(--color-primary-rgb),0.6)] hover:scale-105 active:scale-95 animate-pulse-slow">
+                      <button
+                        onClick={comprar}
+                        className="relative overflow-hidden px-6 lg:px-10 py-3.5 rounded-xl font-black text-xs md:text-sm uppercase tracking-widest transition-all group whitespace-nowrap flex-[1.2] lg:flex-none flex justify-center bg-[var(--color-primary)] text-[var(--color-primary-foreground)] shadow-[0_0_35px_rgba(var(--color-primary-rgb),0.6)] hover:scale-105 active:scale-95 animate-pulse-slow">
                         <span className="relative z-10 flex items-center gap-2 drop-shadow-md">
                           <svg
                             xmlns="http://www.w3.org/2000/svg"

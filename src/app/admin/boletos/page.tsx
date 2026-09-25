@@ -1,5 +1,7 @@
 import { getOrders, approveOrder, rejectOrder, deleteOrder } from "@/app/admin/_actions/orders";
 import { PageHeader, StatusBadge } from "@/components/admin/ui";
+import { ProofModal } from "@/components/admin/ProofModal";
+import { safeHref } from "@/lib/safe";
 
 export const dynamic = "force-dynamic";
 
@@ -59,10 +61,31 @@ function OrderCard({ order: o, pending = false }: { order: any; pending?: boolea
 
       <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
         <Field label="Cédula" value={o.buyerCedula || "—"} />
-        <Field label="Método de pago" value={o.paymentMethod?.name || o.paymentMethodName || "—"} />
+        <div>
+          <p className="text-xs font-bold text-slate-400 uppercase mb-0.5">Método de pago</p>
+          <div className="flex items-center gap-2">
+            {safeHref(o.paymentMethod?.imageUrl) ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={safeHref(o.paymentMethod?.imageUrl) || "/placeholder.svg"}
+                alt={o.paymentMethod?.name || "Método de pago"}
+                className="w-6 h-6 rounded object-cover border border-slate-700 shrink-0"
+              />
+            ) : null}
+            <p className="text-white break-words">{o.paymentMethod?.name || o.paymentMethodName || "—"}</p>
+          </div>
+        </div>
         <Field label="Referencia" value={o.reference || "—"} />
         <Field label="Monto" value={`$${o.amountUsd?.toFixed?.(2) ?? o.amountUsd} / ${o.amountBs?.toFixed?.(2) ?? o.amountBs} Bs`} />
       </div>
+
+      {(o.senderBank || o.senderHolderId || o.senderPhone) && (
+        <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm border-t border-slate-800 pt-4">
+          <Field label="Banco emisor" value={o.senderBank || "—"} />
+          <Field label="Cédula titular" value={o.senderHolderId || "—"} />
+          <Field label="Teléfono emisor" value={o.senderPhone || "—"} />
+        </div>
+      )}
 
       <div className="mt-3">
         <p className="text-xs font-bold text-slate-400 uppercase mb-1">Boletos</p>
@@ -79,22 +102,10 @@ function OrderCard({ order: o, pending = false }: { order: any; pending?: boolea
         </div>
       </div>
 
-      {o.proofUrl ? (
+      {safeHref(o.proofUrl) ? (
         <div className="mt-3">
           <p className="text-xs font-bold text-slate-400 uppercase mb-1">Comprobante de pago</p>
-          <a
-            href={o.proofUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block"
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={o.proofUrl || "/placeholder.svg"}
-              alt="Comprobante de pago"
-              className="h-32 rounded-lg border border-slate-700 object-cover hover:border-[#f8f400]"
-            />
-          </a>
+          <ProofModal proofUrl={safeHref(o.proofUrl) as string} />
         </div>
       ) : null}
 

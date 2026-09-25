@@ -1,9 +1,11 @@
 import {
   getTopPurchases,
   createTopPurchase,
+  updateTopPurchase,
   deleteTopPurchase,
 } from "@/app/admin/_actions/top";
 import { PageHeader, Card, inputCls, labelCls, PrimaryButton } from "@/components/admin/ui";
+import { EditableTopEntry } from "@/components/admin/EditableTopEntry";
 
 export const dynamic = "force-dynamic";
 
@@ -53,21 +55,13 @@ export default async function TopPage() {
         {[1, 2, 3].map((pos) => {
           const entry = top.find((t) => t.position === pos);
           return (
-            <Card key={pos} className="text-center">
-              <div className="text-4xl font-black text-[#f8f400]">#{pos}</div>
-              {entry ? (
-                <>
-                  <p className="mt-2 text-lg font-bold text-white">{entry.name}</p>
-                  <p className="text-sm text-slate-400">{entry.detail}</p>
-                  <p className="mt-1 text-sm text-slate-300">${entry.amount.toFixed(2)}</p>
-                  <form action={deleteTopPurchase.bind(null, entry.id)} className="mt-3">
-                    <button className="text-sm text-red-400 hover:underline">Quitar</button>
-                  </form>
-                </>
-              ) : (
-                <p className="mt-4 text-sm text-slate-600">Vacío</p>
-              )}
-            </Card>
+            <EditableTopEntry
+              key={pos}
+              pos={pos}
+              entry={entry}
+              updateAction={entry ? updateTopPurchase.bind(null, entry.id) : null}
+              deleteAction={entry ? deleteTopPurchase.bind(null, entry.id) : null}
+            />
           );
         })}
       </div>

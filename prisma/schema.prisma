@@ -73,12 +73,14 @@ model Participant {
 }
 
 model PaymentMethod {
-  id      String  @id @default(cuid())
-  name    String // Pago Móvil, Zelle, Binance, etc.
-  type    String  @default("otro")
-  details String  @default("") // Datos: teléfono, banco, correo, etc.
-  enabled Boolean @default(true)
-  order   Int     @default(0)
+  id       String  @id @default(cuid())
+  name     String // Pago Móvil, Zelle, Binance, etc.
+  type     String  @default("otro")
+  details  String  @default("") // Versión de texto (compatibilidad); se genera desde fields
+  fields   Json    @default("[]") // Pares {label, value} dinámicos: correo, teléfono, banco, etc.
+  imageUrl String  @default("") // Ícono/logo del método, guardado como blob (data URL)
+  enabled  Boolean @default(true)
+  order    Int     @default(0)
 
   orders TicketOrder[]
 }
@@ -101,6 +103,11 @@ model TicketOrder {
   buyerEmail   String
   buyerPhone   String  @default("")
   buyerCedula  String  @default("")
+
+  // Datos bancarios del emisor del pago (sección "Tus datos bancarios")
+  senderBank     String @default("") // Banco desde el que se hizo el pago
+  senderHolderId String @default("") // Cédula del titular de la cuenta (ej. V-12345678)
+  senderPhone    String @default("") // Teléfono emisor (pago móvil)
 
   ticketCount   Int      @default(1)
   ticketNumbers String   @default("") // números asignados, separados por coma

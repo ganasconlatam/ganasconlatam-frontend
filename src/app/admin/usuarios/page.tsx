@@ -1,5 +1,6 @@
-import { getAdmins, createAdmin, deleteAdmin } from "@/app/admin/_actions/admins";
+import { getAdmins, createAdmin, updateAdmin, deleteAdmin } from "@/app/admin/_actions/admins";
 import { PageHeader, Card, inputCls, labelCls, PrimaryButton } from "@/components/admin/ui";
+import { EditableAdminRow } from "@/components/admin/EditableAdminRow";
 
 export const dynamic = "force-dynamic";
 
@@ -58,21 +59,18 @@ export default async function UsuariosPage() {
           </thead>
           <tbody>
             {admins.map((a) => (
-              <tr key={a.id} className="border-b border-slate-800/60">
-                <td className="py-3 pr-4 text-white">{a.name || "—"}</td>
-                <td className="py-3 pr-4">{a.email}</td>
-                <td className="py-3 pr-4 capitalize">{a.role}</td>
-                <td className="py-3 text-right">
-                  <form
-                    action={async () => {
-                      "use server";
-                      await deleteAdmin(a.id);
-                    }}
-                  >
-                    <button className="text-red-400 hover:underline">Eliminar</button>
-                  </form>
-                </td>
-              </tr>
+              <EditableAdminRow
+                key={a.id}
+                admin={a}
+                updateAction={async (fd) => {
+                  "use server";
+                  await updateAdmin(a.id, fd);
+                }}
+                deleteAction={async () => {
+                  "use server";
+                  await deleteAdmin(a.id);
+                }}
+              />
             ))}
           </tbody>
         </table>

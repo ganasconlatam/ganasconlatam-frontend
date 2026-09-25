@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import type { Raffle } from "@prisma/client";
 import { inputCls, labelCls, PrimaryButton } from "./ui";
 
@@ -10,6 +13,26 @@ export default function RaffleForm({
   raffle?: Raffle | null;
   dollarRate: number;
 }) {
+  const [imageUrl, setImageUrl] = useState(raffle?.imageUrl ?? "");
+  const [uploadError, setUploadError] = useState("");
+
+  function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadError("");
+    if (!file.type.startsWith("image/")) {
+      setUploadError("El archivo debe ser una imagen.");
+      return;
+    }
+    if (file.size > 3 * 1024 * 1024) {
+      setUploadError("La imagen no debe superar los 3 MB.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => setImageUrl(typeof reader.result === "string" ? reader.result : "");
+    reader.readAsDataURL(file);
+  }
+
   return (
     <form action={action} className="space-y-5">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -38,8 +61,39 @@ export default function RaffleForm({
       </div>
 
       <div>
-        <label className={labelCls}>Imagen (URL)</label>
-        <input name="imageUrl" defaultValue={raffle?.imageUrl ?? ""} className={inputCls} placeholder="/images/rifas/1.png" />
+        <label className={labelCls}>Imagen del sorteo</label>
+        <input type="hidden" name="imageUrl" value={imageUrl} />
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+          <div className="relative h-32 w-full overflow-hidden rounded-lg border border-slate-700 bg-slate-800 sm:w-56 shrink-0">
+            {imageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={imageUrl || "/placeholder.svg"} alt="Vista previa de la rifa" className="h-full w-full object-cover" />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-xs text-slate-500">Sin imagen</div>
+            )}
+          </div>
+          <div className="flex-1 space-y-2">
+            <input
+              type="file"
+              accept="image/*"
+              onChange={onFileChange}
+              className="block w-full text-sm text-slate-300 file:mr-3 file:rounded-lg file:border-0 file:bg-[var(--color-primary)] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-[var(--color-primary-foreground)] hover:file:brightness-110"
+            />
+            <p className="text-xs text-slate-500">Sube un archivo desde tu computadora (máx. 3 MB) o pega una URL abajo.</p>
+            <input
+              value={imageUrl.startsWith("data:") ? "" : imageUrl}
+              onChange={(e) => setImageUrl(e.target.value)}
+              className={inputCls}
+              placeholder="/images/rifas/1.png"
+            />
+            {imageUrl ? (
+              <button type="button" onClick={() => setImageUrl("")} className="text-xs text-red-400 hover:text-red-300">
+                Quitar imagen
+              </button>
+            ) : null}
+            {uploadError ? <p className="text-xs text-red-400">{uploadError}</p> : null}
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
