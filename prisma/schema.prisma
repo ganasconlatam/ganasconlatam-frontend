@@ -25,6 +25,7 @@ model SiteConfig {
   buttonColor  String   @default("#f8f400")
   borderColor  String   @default("#f8f400")
   frameColor   String   @default("#151f32")
+  popularTickets Int    @default(5) // Cantidad de boletos resaltada con la etiqueta "POPULAR" (0 = ninguna)
   updatedAt    DateTime @updatedAt
 }
 

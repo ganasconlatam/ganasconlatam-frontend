@@ -26,6 +26,19 @@ export async function updateDollarRate(formData: FormData) {
   revalidatePath("/");
 }
 
+// ---- Número popular (sección independiente) ----
+export async function updatePopularTickets(formData: FormData) {
+  await requireAdmin();
+  const popularTickets = parseInt(String(formData.get("popularTickets") ?? "0")) || 0;
+  await prisma.siteConfig.upsert({
+    where: { id: 1 },
+    update: { popularTickets },
+    create: { id: 1, popularTickets },
+  });
+  revalidatePath("/admin/configuracion");
+  revalidatePath("/");
+}
+
 // ---- Colores del sitio (sección independiente) ----
 export async function updateColors(formData: FormData) {
   await requireAdmin();

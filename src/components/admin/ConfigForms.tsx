@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { ColorField } from "./ColorField";
-import { updateDollarRate, updateColors, updateSocials } from "@/app/admin/_actions/config";
+import { updateDollarRate, updateColors, updateSocials, updatePopularTickets } from "@/app/admin/_actions/config";
 import { type SocialsMap } from "@/lib/socials";
 
 function SaveButton({ pending }: { pending: boolean }) {
@@ -66,6 +66,40 @@ export function DollarRateForm({ dollarRate }: { dollarRate: number }) {
             defaultValue={dollarRate}
             className="w-40 rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-white outline-none focus:border-white/30"
           />
+        </label>
+        <div className="flex items-center gap-3">
+          <SaveButton pending={pending} />
+          <Status state={state} />
+        </div>
+      </form>
+    </Section>
+  );
+}
+
+const TICKET_PRESETS = [1, 2, 5, 10, 20, 50];
+
+export function PopularTicketsForm({ popularTickets }: { popularTickets: number }) {
+  const { pending, state, onSubmit } = useSaveAction(updatePopularTickets);
+  return (
+    <Section
+      title="Número popular"
+      description='Resalta una cantidad de boletos con la etiqueta "POPULAR" en la página principal.'
+    >
+      <form onSubmit={onSubmit} className="flex flex-wrap items-end gap-4">
+        <label className="flex flex-col gap-1">
+          <span className="text-sm text-white/70">Cantidad destacada</span>
+          <select
+            name="popularTickets"
+            defaultValue={String(popularTickets)}
+            className="w-48 rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-white outline-none focus:border-white/30"
+          >
+            <option value="0">Ninguno</option>
+            {TICKET_PRESETS.map((n) => (
+              <option key={n} value={String(n)}>
+                {n} {n === 1 ? "boleto" : "boletos"}
+              </option>
+            ))}
+          </select>
         </label>
         <div className="flex items-center gap-3">
           <SaveButton pending={pending} />

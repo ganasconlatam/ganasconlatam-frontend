@@ -1,6 +1,6 @@
 import { getConfig, getSocials } from "@/app/admin/_actions/config";
 import { PageHeader } from "@/components/admin/ui";
-import { DollarRateForm, ColorsForm, SocialsForm } from "@/components/admin/ConfigForms";
+import { DollarRateForm, PopularTicketsForm, ColorsForm, SocialsForm } from "@/components/admin/ConfigForms";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +15,8 @@ export default async function ConfiguracionPage() {
       />
 
       <DollarRateForm dollarRate={config.dollarRate} />
+
+      <PopularTicketsForm popularTickets={config.popularTickets} />
 
       <ColorsForm
         buttonColor={config.buttonColor}
