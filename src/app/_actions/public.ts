@@ -234,8 +234,16 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
   if (input.buyerEmail?.trim()) {
     await sendEmail({
       to: input.buyerEmail.trim(),
-      subject: "Verificación de pago en proceso - Ganas con Latam",
-      html: emailVerificacionPago(name, raffle.title),
+      subject: "Recibimos tu compra — pendiente de aprobación · Ganas con Latam",
+      html: emailVerificacionPago({
+        nombre: name,
+        titulo: raffle.title,
+        imagenUrl: raffle.imageUrl,
+        numeros: numbers.join(", "),
+        totalBs: amountBs,
+        totalUsd: amountUsd,
+        referencia: input.reference?.trim().slice(0, 200) ?? "",
+      }),
     });
   }
 
