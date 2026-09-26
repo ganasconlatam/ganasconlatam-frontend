@@ -431,8 +431,12 @@ export default function NavegacionInterna() {
         </div>
         <div className="flex flex-col items-center gap-4 py-6 md:py-0">
           <div className="flex flex-wrap justify-center items-center gap-6 md:gap-10">
-            <img src="images/9.png" alt="CONALOT" className="h-10 md:h-14 object-contain hover:scale-105 transition-transform duration-300" data-sf-original-src="https://www.ganasconlatam.com/logos/conalot.png" />
-            <img src="images/10.png" alt="Lotería del Táchira" className="h-10 md:h-14 object-contain hover:scale-105 transition-transform duration-300" data-sf-original-src="https://www.ganasconlatam.com/logos/tachira.png" />
+            <div className="h-12 w-12 md:h-14 md:w-14 overflow-hidden rounded-lg hover:scale-105 transition-transform duration-300 shrink-0">
+              <img src="/images/legal-logos.png" alt="CONALOT - Comisión Nacional de Lotería" className="h-full w-full object-cover object-left" />
+            </div>
+            <div className="h-12 w-12 md:h-14 md:w-14 overflow-hidden rounded-lg hover:scale-105 transition-transform duration-300 shrink-0">
+              <img src="/images/legal-logos.png" alt="Lotería del Táchira" className="h-full w-full object-cover object-right" />
+            </div>
             <img src="images/11.png" alt="SUPERGANA" className="h-8 md:h-12 object-contain hover:scale-105 transition-transform duration-300" data-sf-original-src="https://www.ganasconlatam.com/logos/SUPERGANA.png" />
           </div>
         </div>

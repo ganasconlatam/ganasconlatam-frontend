@@ -16,6 +16,7 @@ export default function ComponenteInicio({ cambiarVista }: HijoProps) {
     setMode,
     totalBs,
     socialLinks,
+    config,
   } = usePurchase();
 
   const whatsapp = socialLinks.find((s) => s.platform === "whatsapp");
@@ -82,7 +83,7 @@ export default function ComponenteInicio({ cambiarVista }: HijoProps) {
             <div className="grid grid-cols-3 gap-3 mb-6">
               {PRESETS.map((preset) => {
                 const active = quantity === preset;
-                const popular = preset === 5;
+                const popular = !!config?.popularTickets && config.popularTickets === preset;
                 return (
                   <button
                     key={preset}
