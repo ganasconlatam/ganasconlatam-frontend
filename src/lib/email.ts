@@ -1,255 +1,351 @@
-import "server-only";
-import { escapeHtml } from "@/lib/safe";
+import { Resend } from "resend";
 
-// Envío de correos con Resend. Si RESEND_API_KEY no está configurado, registra
-// el correo en consola (modo desarrollo) para que el flujo siga funcionando
-// hasta conectar el proveedor.
-const RESEND_API_KEY = process.env.RESEND_API_KEY;
+const resend = new Resend(process.env.RESEND_API_KEY);
+
 // Remitente verificado en Resend para el dominio del proyecto.
-const FROM = process.env.EMAIL_FROM || "Ganas con Latam <send@ganaconllatam.com>";
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://ganaconllatam.com";
+const FROM = "Ganas con Latam <send@ganaconllatam.com>";
+const SITE_URL = "https://www.ganaconllatam.com";
+const LOGO_URL = `${SITE_URL}/images/4.webp`;
+const SUPPORT_URL = `${SITE_URL}/#soporte`;
 
-interface SendArgs {
+// ---------------------------------------------------------------------------
+// Envío base. El SDK de Resend NO lanza excepciones: devuelve { data, error }.
+// Un fallo de correo nunca debe romper el flujo de compra/aprobación, así que
+// registramos el error y devolvemos ok:false sin lanzar.
+// ---------------------------------------------------------------------------
+export async function sendEmail({
+  to,
+  subject,
+  html,
+  idempotencyKey,
+}: {
   to: string;
   subject: string;
   html: string;
-}
-
-export async function sendEmail({ to, subject, html }: SendArgs): Promise<{ ok: boolean; skipped?: boolean }> {
-  if (!RESEND_API_KEY) {
-    console.log("[v0] Email (no RESEND_API_KEY, no enviado):", { to, subject });
-    return { ok: true, skipped: true };
+  idempotencyKey?: string;
+}) {
+  if (!process.env.RESEND_API_KEY) {
+    console.log("[v0] RESEND_API_KEY no configurada — correo omitido:", subject);
+    return { ok: false as const, skipped: true as const };
   }
-
-  try {
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${RESEND_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ from: FROM, to, subject, html }),
-    });
-    if (!res.ok) {
-      console.error("[v0] Error enviando email:", await res.text());
-      return { ok: false };
-    }
-    return { ok: true };
-  } catch (err) {
-    console.error("[v0] Excepción enviando email:", err);
-    return { ok: false };
+  const { data, error } = await resend.emails.send(
+    { from: FROM, to: [to], subject, html },
+    idempotencyKey ? { idempotencyKey } : undefined,
+  );
+  if (error) {
+    console.error("[v0] Error enviando correo:", error.message);
+    return { ok: false as const, error: error.message };
   }
+  return { ok: true as const, id: data?.id };
 }
 
-// ------------------------------------------------------------------
-// Datos dinámicos de cada correo (lo único que cambia por sorteo/compra)
-// ------------------------------------------------------------------
-export interface OrderEmailData {
-  nombre: string; // nombre y apellidos del comprador
-  titulo: string; // título del sorteo
-  imagenUrl?: string; // imagen del sorteo
-  numeros?: string; // número(s) de ticket
-  totalBs?: number; // total pagado en Bs
-  totalUsd?: number; // total pagado en USD
-  referencia?: string; // referencia del pago
-}
-
-export interface RaffleEmailData {
-  titulo: string;
-  imagenUrl?: string;
-  precioUsd?: number;
-  fecha?: string;
-  hora?: string;
-  codigo?: string;
-}
-
-// ------------------------------------------------------------------
-// Utilidades de presentación (email-safe, estilos en línea)
-// ------------------------------------------------------------------
-function absolutize(url?: string): string {
+// ---------------------------------------------------------------------------
+// Utilidades de formato / render compartidas por las plantillas.
+// ---------------------------------------------------------------------------
+function absUrl(url: string): string {
   if (!url) return "";
-  if (url.startsWith("http") || url.startsWith("data:")) return url;
+  if (/^https?:\/\//i.test(url)) return url;
   return `${SITE_URL}${url.startsWith("/") ? "" : "/"}${url}`;
 }
 
-function fmtBs(n?: number): string {
-  if (n == null) return "";
-  return `Bs ${n.toLocaleString("es-VE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+function fmtBs(n: number): string {
+  return `${new Intl.NumberFormat("es-VE", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(n)} VES`;
 }
 
-function fmtUsd(n?: number): string {
-  if (n == null) return "";
-  return `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+function fmtUsd(n: number): string {
+  return `$${new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(n)} USD`;
 }
 
-function row(label: string, value?: string): string {
-  if (!value) return "";
+function splitTickets(numeros: string): string[] {
+  return numeros
+    .split(",")
+    .map((t) => t.trim())
+    .filter(Boolean);
+}
+
+// Caja de un ticket con borde punteado. `color` define el acento (naranja/verde).
+function ticketBox(num: string, color: string): string {
   return `
-    <tr>
-      <td style="padding:8px 0;color:#64748b;font-size:13px;vertical-align:top;width:42%">${escapeHtml(label)}</td>
-      <td style="padding:8px 0;color:#0f172a;font-size:14px;font-weight:600;text-align:right">${value}</td>
-    </tr>`;
+    <table role="presentation" cellpadding="0" cellspacing="0" style="display:inline-table;margin:6px;">
+      <tr><td style="border:2px dashed ${color};border-radius:10px;padding:10px 22px;text-align:center;background:#ffffff;">
+        <div style="font-family:Arial,Helvetica,sans-serif;font-size:10px;letter-spacing:2px;color:#94a3b8;font-weight:700;">TICKET</div>
+        <div style="font-family:'Courier New',monospace;font-size:22px;font-weight:700;letter-spacing:6px;color:#1e293b;margin-top:2px;">${num}</div>
+      </td></tr>
+    </table>`;
 }
 
-interface LayoutArgs {
-  badgeText: string;
-  badgeBg: string;
-  badgeColor: string;
-  heading: string;
-  intro: string;
-  imagenUrl?: string;
-  detailsRows?: string;
-  outro?: string;
-  ctaLabel?: string;
-  ctaUrl?: string;
+function ticketsBlock(numeros: string, color: string): string {
+  return splitTickets(numeros)
+    .map((n) => ticketBox(n, color))
+    .join("");
 }
 
-function layout(a: LayoutArgs): string {
-  const img = absolutize(a.imagenUrl);
+// Cabecera oscura con logo (usada en pendiente / aprobado).
+function darkHeader(): string {
   return `
-  <div style="margin:0;padding:0;background:#f1f5f9;font-family:Arial,Helvetica,sans-serif">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:24px 0">
-      <tr>
-        <td align="center">
-          <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e2e8f0">
-            <tr>
-              <td style="background:#0f172a;padding:20px 28px">
-                <span style="color:#ffffff;font-size:18px;font-weight:800;letter-spacing:0.5px">GANAS CON LATAM</span>
-                <span style="display:inline-block;margin-left:6px;color:#22c55e;font-size:18px;font-weight:800">•</span>
-              </td>
-            </tr>
-            <tr>
-              <td style="height:4px;background:#22c55e;font-size:0;line-height:0">&nbsp;</td>
-            </tr>
-            ${
-              img
-                ? `<tr><td style="padding:0"><img src="${escapeHtml(img)}" alt="${escapeHtml(a.heading)}" width="600" style="display:block;width:100%;max-height:280px;object-fit:cover" /></td></tr>`
-                : ""
-            }
-            <tr>
-              <td style="padding:28px 28px 8px">
-                <span style="display:inline-block;padding:6px 14px;border-radius:999px;background:${a.badgeBg};color:${a.badgeColor};font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px">${escapeHtml(a.badgeText)}</span>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:8px 28px 4px">
-                <h1 style="margin:0;color:#0f172a;font-size:22px;font-weight:800">${escapeHtml(a.heading)}</h1>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:8px 28px 16px">
-                <p style="margin:0;color:#475569;font-size:15px;line-height:1.6">${a.intro}</p>
-              </td>
-            </tr>
-            ${
-              a.detailsRows
-                ? `<tr><td style="padding:0 28px 8px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:8px 16px">${a.detailsRows}</table></td></tr>`
-                : ""
-            }
-            ${
-              a.ctaLabel && a.ctaUrl
-                ? `<tr><td style="padding:20px 28px 4px"><a href="${escapeHtml(a.ctaUrl)}" style="display:inline-block;background:#22c55e;color:#062e13;text-decoration:none;font-weight:800;font-size:15px;padding:14px 28px;border-radius:10px">${escapeHtml(a.ctaLabel)}</a></td></tr>`
-                : ""
-            }
-            ${
-              a.outro
-                ? `<tr><td style="padding:16px 28px 4px"><p style="margin:0;color:#475569;font-size:14px;line-height:1.6">${a.outro}</p></td></tr>`
-                : ""
-            }
-            <tr>
-              <td style="padding:24px 28px 28px">
-                <hr style="border:none;border-top:1px solid #e2e8f0;margin:0 0 16px" />
-                <p style="margin:0;color:#94a3b8;font-size:12px;line-height:1.6">
-                  Este es un mensaje automático de Ganas con Latam. Por favor no respondas a este correo.<br/>
-                  © ${new Date().getFullYear()} Ganas con Latam. Todos los derechos reservados.
-                </p>
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-    </table>
-  </div>`;
+    <tr><td style="background:#151f32;padding:24px 0;text-align:center;">
+      <img src="${LOGO_URL}" alt="Ganas con Latam" width="72" height="72" style="display:inline-block;border-radius:8px;object-fit:contain;" />
+    </td></tr>`;
 }
 
-function orderDetails(d: OrderEmailData): string {
-  const total = [fmtBs(d.totalBs), d.totalUsd != null ? fmtUsd(d.totalUsd) : ""].filter(Boolean).join(" · ");
-  return (
-    row("Sorteo", escapeHtml(d.titulo)) +
-    row("A nombre de", escapeHtml(d.nombre)) +
-    row("Número(s) de ticket", d.numeros ? escapeHtml(d.numeros) : "") +
-    row("Total pagado", total || "") +
-    row("Referencia", d.referencia ? escapeHtml(d.referencia) : "")
-  );
+// Banner con la imagen del sorteo (usada en pendiente / aprobado).
+function bannerBlock(imagenUrl: string, titulo: string): string {
+  const src = absUrl(imagenUrl);
+  if (!src) return "";
+  return `
+    <tr><td style="background:#151f32;padding:0;">
+      <img src="${src}" alt="${escapeHtml(titulo)}" width="600" style="display:block;width:100%;max-width:600px;height:auto;" />
+    </td></tr>`;
 }
 
-// ------------------------------------------------------------------
-// Plantillas
-// ------------------------------------------------------------------
-
-// 1) Compra recibida — pendiente de aprobación
-export function emailVerificacionPago(d: OrderEmailData): string {
-  return layout({
-    badgeText: "Pendiente de aprobación",
-    badgeBg: "#fef3c7",
-    badgeColor: "#b45309",
-    heading: `¡Hola ${escapeHtml(d.nombre)}!`,
-    intro: `Hemos recibido tu compra para el sorteo <strong>${escapeHtml(d.titulo)}</strong>. Tu pago está <strong>en proceso de verificación</strong> y te avisaremos por este medio en cuanto sea aprobado y tus boletos queden confirmados.`,
-    imagenUrl: d.imagenUrl,
-    detailsRows: orderDetails(d),
-    outro: "Gracias por participar. ¡Te deseamos mucha suerte!",
-  });
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
-// 2) Pago aprobado
-export function emailPagoAprobado(d: OrderEmailData): string {
-  return layout({
-    badgeText: "Compra aprobada",
-    badgeBg: "#dcfce7",
-    badgeColor: "#15803d",
-    heading: `¡Felicidades ${escapeHtml(d.nombre)}!`,
-    intro: `Tu pago para el sorteo <strong>${escapeHtml(d.titulo)}</strong> fue <strong>aprobado</strong> y tus boletos están confirmados. ¡Ya estás participando!`,
-    imagenUrl: d.imagenUrl,
-    detailsRows: orderDetails(d),
-    outro: "Guarda este correo como comprobante. ¡Mucha suerte en el sorteo!",
-    ctaLabel: "Ver mis boletos",
-    ctaUrl: `${SITE_URL}/consultar`,
-  });
+function shell(inner: string, bg = "#f0f2f5"): string {
+  return `<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
+<body style="margin:0;padding:0;background:${bg};">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${bg};padding:24px 12px;">
+    <tr><td align="center">
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background:#ffffff;border-radius:14px;overflow:hidden;">
+        ${inner}
+      </table>
+    </td></tr>
+  </table>
+</body></html>`;
 }
 
-// 3) Pago rechazado
-export function emailPagoRechazado(d: OrderEmailData): string {
-  return layout({
-    badgeText: "Compra rechazada",
-    badgeBg: "#fee2e2",
-    badgeColor: "#b91c1c",
-    heading: `Hola ${escapeHtml(d.nombre)}`,
-    intro: `Lamentamos informarte que no pudimos verificar tu pago para el sorteo <strong>${escapeHtml(d.titulo)}</strong>, por lo que tu compra fue <strong>rechazada</strong> y los números quedaron liberados nuevamente.`,
-    imagenUrl: d.imagenUrl,
-    detailsRows: orderDetails(d),
-    outro: "Si crees que se trata de un error o ya realizaste el pago, vuelve a intentarlo o escríbenos por WhatsApp y con gusto te ayudamos.",
-    ctaLabel: "Volver a participar",
-    ctaUrl: SITE_URL,
-  });
+// ===========================================================================
+// 1) COMPRA PENDIENTE — "¡Verificando Pago!"
+// ===========================================================================
+export function emailVerificacionPago(p: {
+  nombre: string;
+  titulo: string;
+  imagenUrl: string;
+  numeros: string;
+  totalBs: number;
+  totalUsd: number;
+  referencia: string;
+  metodoPago?: string;
+}): string {
+  const tickets = splitTickets(p.numeros);
+  const orange = "#f59e0b";
+  const green = "#22c55e";
+  const inner = `
+    ${darkHeader()}
+    ${bannerBlock(p.imagenUrl, p.titulo)}
+    <tr><td style="padding:28px 32px 8px;font-family:Arial,Helvetica,sans-serif;text-align:center;">
+      <div style="font-size:24px;font-weight:800;color:${orange};">¡Verificando Pago! &#9203;</div>
+      <div style="font-size:14px;font-weight:700;color:#1e293b;margin-top:8px;">Hemos recibido tu reporte de pago y pronto será verificado</div>
+      <div style="margin:18px auto 0;display:inline-block;background:#fff7ed;color:${orange};border:1px solid #fdba74;border-radius:999px;padding:8px 18px;font-size:13px;font-weight:700;">&#9203; Estado: Pago en proceso de verificación</div>
+    </td></tr>
+    <tr><td style="padding:18px 32px 0;font-family:Arial,Helvetica,sans-serif;text-align:center;">
+      <div style="font-size:16px;font-weight:800;color:${orange};">¡Hola, ${escapeHtml(p.nombre)}! &#128075;</div>
+      <p style="font-size:14px;color:#334155;line-height:1.6;margin:10px 0 0;">
+        Tu pago para la rifa <span style="color:${green};font-weight:700;">${escapeHtml(p.titulo)}</span> está siendo verificado.
+        Te notificaremos en cuanto se valide para que puedas descargar tu ticket oficial.
+      </p>
+    </td></tr>
+    <tr><td style="padding:24px 32px 0;font-family:Arial,Helvetica,sans-serif;text-align:center;">
+      <div style="font-size:15px;font-weight:800;color:#1e293b;border-bottom:2px solid #e2e8f0;display:inline-block;padding-bottom:6px;">Tus Boletos Seleccionados (${tickets.length})</div>
+      <div style="margin-top:16px;">${ticketsBlock(p.numeros, orange)}</div>
+    </td></tr>
+    <tr><td style="padding:22px 32px 0;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border-radius:12px;font-family:Arial,Helvetica,sans-serif;">
+        <tr><td style="padding:14px 18px;border-bottom:1px solid #eef2f7;font-size:13px;color:#64748b;">Referencia:</td><td style="padding:14px 18px;border-bottom:1px solid #eef2f7;font-size:13px;color:#1e293b;font-weight:700;text-align:right;">${escapeHtml(p.referencia || "—")}</td></tr>
+        ${p.metodoPago ? `<tr><td style="padding:14px 18px;border-bottom:1px solid #eef2f7;font-size:13px;color:#64748b;">Método de Pago:</td><td style="padding:14px 18px;border-bottom:1px solid #eef2f7;font-size:13px;color:#1e293b;font-weight:700;text-align:right;">${escapeHtml(p.metodoPago)}</td></tr>` : ""}
+        <tr><td style="padding:14px 18px;font-size:13px;color:#64748b;">Total Reportado:</td><td style="padding:14px 18px;font-size:15px;color:${green};font-weight:800;text-align:right;">${fmtBs(p.totalBs)}</td></tr>
+      </table>
+    </td></tr>
+    <tr><td style="padding:18px 32px 0;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#fffbeb;border-left:4px solid ${orange};border-radius:8px;">
+        <tr><td style="padding:14px 16px;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#92400e;line-height:1.55;">
+          <strong>&#128161; Importante:</strong> Tus boletos están reservados mientras nuestro equipo valida tu comprobante. En cuanto sea confirmado, recibirás un correo con la aprobación final.
+        </td></tr>
+      </table>
+    </td></tr>
+    <tr><td style="padding:26px 32px 8px;text-align:center;">
+      <a href="${SITE_URL}" style="display:inline-block;background:${green};color:#052e16;text-decoration:none;font-family:Arial,Helvetica,sans-serif;font-weight:800;font-size:15px;padding:14px 40px;border-radius:999px;">Ir al Sitio Web</a>
+    </td></tr>
+    <tr><td style="padding:4px 32px 28px;text-align:center;">
+      <a href="${SUPPORT_URL}" style="color:${green};text-decoration:none;font-family:Arial,Helvetica,sans-serif;font-weight:700;font-size:13px;">¿Tienes dudas? Contacta a Soporte</a>
+    </td></tr>
+    ${footerLight()}
+  `;
+  return shell(inner);
 }
 
-// 4) Nuevo sorteo liberado
-export function emailNuevoSorteo(d: RaffleEmailData): string {
-  const detalles =
-    row("Sorteo", escapeHtml(d.titulo)) +
-    row("Precio por boleto", d.precioUsd != null ? fmtUsd(d.precioUsd) : "") +
-    row("Fecha del sorteo", d.fecha ? escapeHtml([d.fecha, d.hora].filter(Boolean).join(" ")) : "") +
-    row("Código", d.codigo ? escapeHtml(d.codigo) : "");
-  return layout({
-    badgeText: "Nuevo sorteo",
-    badgeBg: "#dbeafe",
-    badgeColor: "#1d4ed8",
-    heading: "¡Se liberó un nuevo sorteo!",
-    intro: `Ya está disponible <strong>${escapeHtml(d.titulo)}</strong>. Asegura tus boletos antes de que se agoten y participa por increíbles premios.`,
-    imagenUrl: d.imagenUrl,
-    detailsRows: detalles,
-    outro: "¡No te quedes fuera! Los mejores números vuelan.",
-    ctaLabel: "Participar ahora",
-    ctaUrl: SITE_URL,
-  });
+// ===========================================================================
+// 2) COMPRA APROBADA — "¡Pago Aprobado!"
+// ===========================================================================
+export function emailPagoAprobado(p: {
+  nombre: string;
+  titulo: string;
+  imagenUrl: string;
+  numeros: string;
+  totalBs: number;
+  totalUsd: number;
+  referencia: string;
+}): string {
+  const tickets = splitTickets(p.numeros);
+  const green = "#16a34a";
+  const inner = `
+    ${darkHeader()}
+    ${bannerBlock(p.imagenUrl, p.titulo)}
+    <tr><td style="padding:28px 32px 0;font-family:Arial,Helvetica,sans-serif;text-align:center;">
+      <div style="font-size:22px;font-weight:800;color:${green};">¡Felicidades, tu pago ha sido aprobado! &#127881;</div>
+      <p style="font-size:14px;color:#334155;line-height:1.6;margin:14px 0 0;">
+        Hola <strong>${escapeHtml(p.nombre)}</strong>, tu compra fue verificada exitosamente. Ya estás participando oficialmente en el sorteo <strong>${escapeHtml(p.titulo)}</strong>.
+      </p>
+    </td></tr>
+    <tr><td style="padding:24px 32px 0;font-family:Arial,Helvetica,sans-serif;text-align:center;">
+      <div style="font-size:15px;font-weight:800;color:#1e293b;border-bottom:2px solid #e2e8f0;display:inline-block;padding-bottom:6px;">Tus Boletos (${tickets.length})</div>
+      <div style="margin-top:16px;">${ticketsBlock(p.numeros, "#22c55e")}</div>
+    </td></tr>
+    <tr><td style="padding:22px 32px 0;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border-radius:12px;font-family:Arial,Helvetica,sans-serif;">
+        <tr><td style="padding:14px 18px;border-bottom:1px solid #eef2f7;font-size:13px;color:#64748b;">Referencia:</td><td style="padding:14px 18px;border-bottom:1px solid #eef2f7;font-size:13px;color:#1e293b;font-weight:700;text-align:right;">${escapeHtml(p.referencia || "—")}</td></tr>
+        <tr><td style="padding:14px 18px;font-size:13px;color:#64748b;">Total Pagado:</td><td style="padding:14px 18px;font-size:15px;color:${green};font-weight:800;text-align:right;">${fmtBs(p.totalBs)}</td></tr>
+      </table>
+    </td></tr>
+    <tr><td style="padding:26px 32px 8px;text-align:center;">
+      <a href="${SITE_URL}" style="display:inline-block;background:#22c55e;color:#052e16;text-decoration:none;font-family:Arial,Helvetica,sans-serif;font-weight:800;font-size:15px;padding:14px 40px;border-radius:999px;">Ir al Sitio Web</a>
+    </td></tr>
+    <tr><td style="padding:4px 32px 28px;text-align:center;">
+      <a href="${SUPPORT_URL}" style="color:#22c55e;text-decoration:none;font-family:Arial,Helvetica,sans-serif;font-weight:700;font-size:13px;">¿Tienes dudas? Contacta a Soporte</a>
+    </td></tr>
+    ${footerLight()}
+  `;
+  return shell(inner);
+}
+
+// ===========================================================================
+// 3) COMPRA RECHAZADA
+// ===========================================================================
+export function emailPagoRechazado(p: {
+  nombre: string;
+  titulo: string;
+  imagenUrl: string;
+  numeros: string;
+  totalBs: number;
+  totalUsd: number;
+  referencia: string;
+  motivo?: string;
+}): string {
+  const red = "#ef4444";
+  const motivo =
+    p.motivo?.trim() ||
+    "Tu comprobante de pago no pudo ser verificado o no coincide con la referencia reportada.";
+  const inner = `
+    <tr><td style="background:${red};padding:28px 0;text-align:center;">
+      <img src="${LOGO_URL}" alt="Ganas con Latam" width="64" height="64" style="display:inline-block;border-radius:8px;object-fit:contain;" />
+    </td></tr>
+    <tr><td style="padding:28px 32px 0;font-family:Arial,Helvetica,sans-serif;">
+      <p style="font-size:15px;color:#1e293b;margin:0;">Hola <strong>${escapeHtml(p.nombre)}</strong>,</p>
+      <p style="font-size:14px;color:#334155;line-height:1.6;margin:14px 0 0;">
+        Te informamos que tu compra de tickets para la rifa <strong>&ldquo;${escapeHtml(p.titulo)}&rdquo;</strong> ha sido rechazada.
+      </p>
+    </td></tr>
+    <tr><td style="padding:18px 32px 0;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#fef2f2;border-left:4px solid ${red};border-radius:8px;">
+        <tr><td style="padding:16px 18px;font-family:Arial,Helvetica,sans-serif;">
+          <div style="font-size:13px;font-weight:800;color:${red};">Motivo del rechazo:</div>
+          <div style="font-size:13px;color:#7f1d1d;font-style:italic;margin-top:6px;">&ldquo;${escapeHtml(motivo)}&rdquo;</div>
+        </td></tr>
+      </table>
+    </td></tr>
+    <tr><td style="padding:18px 32px 0;font-family:Arial,Helvetica,sans-serif;">
+      <p style="font-size:14px;color:#334155;line-height:1.6;margin:0;">
+        Si consideras que esto es un error y necesitas ayuda para corregirlo, por favor contáctanos a través de nuestro soporte.
+      </p>
+      <p style="font-size:14px;color:#334155;line-height:1.6;margin:14px 0 0;">
+        Tus tickets han sido liberados y no se ha procesado ningún cargo válido.
+      </p>
+    </td></tr>
+    <tr><td style="padding:26px 32px 30px;text-align:center;">
+      <a href="${SUPPORT_URL}" style="display:inline-block;background:#f8f400;color:#1e293b;text-decoration:none;font-family:Arial,Helvetica,sans-serif;font-weight:800;font-size:15px;padding:14px 40px;border-radius:8px;">Contactar Soporte</a>
+    </td></tr>
+    <tr><td style="background:#f1f5f9;padding:20px;text-align:center;font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#94a3b8;">
+      &copy; ${new Date().getFullYear()} Ganas con Latam. Todos los derechos reservados.
+    </td></tr>
+  `;
+  return shell(inner);
+}
+
+// ===========================================================================
+// 4) NUEVO SORTEO — tema oscuro completo
+// ===========================================================================
+export function emailNuevoSorteo(p: {
+  titulo: string;
+  imagenUrl: string;
+  precioUsd: number;
+  precioBs?: number;
+  descripcion?: string;
+  fecha: string;
+  hora: string;
+  codigo: string;
+}): string {
+  const src = absUrl(p.imagenUrl);
+  const descripcion = (p.descripcion || "").trim();
+  const fechaHora = [p.fecha, p.hora].filter(Boolean).join(" — ");
+  const precio = `Boleto: <span style="color:#22c55e;font-weight:800;">${fmtUsd(p.precioUsd)}</span>${
+    p.precioBs ? ` <span style="color:#94a3b8;">(${fmtBs(p.precioBs)})</span>` : ""
+  }`;
+  const inner = `
+    <tr><td style="height:6px;background:linear-gradient(90deg,#ef4444,#f59e0b,#22c55e,#3b82f6,#a855f7);font-size:0;line-height:0;">&nbsp;</td></tr>
+    <tr><td style="background:#0f1729;padding:26px 0 8px;text-align:center;">
+      <img src="${LOGO_URL}" alt="Ganas con Latam" width="72" height="72" style="display:inline-block;border-radius:8px;object-fit:contain;" />
+    </td></tr>
+    <tr><td style="background:#0f1729;padding:8px 32px 0;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-left:4px solid #22c55e;background:#16203a;border-radius:8px;">
+        <tr><td style="padding:14px 16px;font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:800;color:#f8fafc;">¡Hola! &#128075;</td></tr>
+      </table>
+    </td></tr>
+    <tr><td style="background:#0f1729;padding:18px 32px 0;font-family:Arial,Helvetica,sans-serif;">
+      <p style="font-size:14px;color:#cbd5e1;line-height:1.7;margin:0;">
+        Ya se encuentra habilitada la selección de números para el nuevo sorteo${fechaHora ? ` (${escapeHtml(fechaHora)})` : ""}.
+      </p>
+      ${descripcion ? `<p style="font-size:14px;color:#cbd5e1;line-height:1.7;margin:14px 0 0;white-space:pre-line;">${escapeHtml(descripcion)}</p>` : ""}
+    </td></tr>
+    ${
+      src
+        ? `<tr><td style="background:#0f1729;padding:20px 32px 0;">
+             <img src="${src}" alt="${escapeHtml(p.titulo)}" width="536" style="display:block;width:100%;border-radius:12px;height:auto;" />
+           </td></tr>`
+        : ""
+    }
+    <tr><td style="background:#0f1729;padding:18px 32px 0;text-align:center;">
+      <div style="display:inline-block;background:#1f2937;color:#fbbf24;border:1px solid #b45309;border-radius:999px;padding:6px 16px;font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:800;letter-spacing:1px;">&#128308; SORTEO DESTACADO</div>
+      <div style="font-family:Arial,Helvetica,sans-serif;font-size:20px;font-weight:800;color:#f8fafc;margin-top:14px;">${escapeHtml(p.titulo)}</div>
+      <div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#e2e8f0;margin-top:8px;">${precio}</div>
+    </td></tr>
+    <tr><td style="background:#0f1729;padding:22px 32px 8px;text-align:center;">
+      <a href="${SITE_URL}" style="display:inline-block;background:#22c55e;color:#052e16;text-decoration:none;font-family:Arial,Helvetica,sans-serif;font-weight:800;font-size:15px;padding:15px 34px;border-radius:999px;">&#128073; ¡PARTICIPA Y GANA AHORA!</a>
+    </td></tr>
+    <tr><td style="background:#0f1729;padding:18px 32px 0;text-align:center;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#94a3b8;">
+      ¡Mucha suerte y gracias por formar parte de <strong style="color:#cbd5e1;">Ganas con Latam</strong>!
+    </td></tr>
+    <tr><td style="background:#0f1729;padding:18px 32px 28px;text-align:center;font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#475569;line-height:1.6;">
+      Has recibido este correo porque eres cliente registrado o participante en Ganas con Latam.<br/>
+      &copy; ${new Date().getFullYear()} Ganas con Latam. Todos los derechos reservados.
+    </td></tr>
+  `;
+  return shell(inner, "#0f1729");
+}
+
+function footerLight(): string {
+  return `<tr><td style="background:#f8fafc;padding:20px 32px;text-align:center;font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#94a3b8;line-height:1.6;">
+    Este es un correo automático enviado por Ganas con Latam. Por favor no respondas directamente a este mensaje.
+  </td></tr>`;
 }

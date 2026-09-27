@@ -47,6 +47,7 @@ export async function createRaffle(formData: FormData) {
 // que hay un nuevo sorteo disponible. Los fallos de envío no bloquean la creación.
 async function notifyNewRaffle(raffle: {
   title: string;
+  details: string;
   imageUrl: string;
   priceUsd: number;
   drawDate: string;
@@ -64,10 +65,15 @@ async function notifyNewRaffle(raffle: {
       .filter((e) => e.includes("@"));
     if (recipients.length === 0) return;
 
+    const config = await prisma.siteConfig.findUnique({ where: { id: 1 } });
+    const rate = config?.dollarRate ?? 0;
+
     const html = emailNuevoSorteo({
       titulo: raffle.title,
+      descripcion: raffle.details,
       imagenUrl: raffle.imageUrl,
       precioUsd: raffle.priceUsd,
+      precioBs: rate > 0 ? raffle.priceUsd * rate : undefined,
       fecha: raffle.drawDate,
       hora: raffle.drawTime,
       codigo: raffle.code,

@@ -232,6 +232,14 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
   }
 
   if (input.buyerEmail?.trim()) {
+    let metodoPago: string | undefined;
+    if (input.paymentMethodId) {
+      const pm = await prisma.paymentMethod.findUnique({
+        where: { id: input.paymentMethodId },
+        select: { name: true },
+      });
+      metodoPago = pm?.name;
+    }
     await sendEmail({
       to: input.buyerEmail.trim(),
       subject: "Recibimos tu compra — pendiente de aprobación · Ganas con Latam",
@@ -243,6 +251,7 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
         totalBs: amountBs,
         totalUsd: amountUsd,
         referencia: input.reference?.trim().slice(0, 200) ?? "",
+        metodoPago,
       }),
     });
   }
