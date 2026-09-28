@@ -232,10 +232,27 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
   }
 
   if (input.buyerEmail?.trim()) {
+    let metodoPago: string | undefined;
+    if (input.paymentMethodId) {
+      const pm = await prisma.paymentMethod.findUnique({
+        where: { id: input.paymentMethodId },
+        select: { name: true },
+      });
+      metodoPago = pm?.name;
+    }
     await sendEmail({
       to: input.buyerEmail.trim(),
-      subject: "Verificación de pago en proceso - Ganas con Latam",
-      html: emailVerificacionPago(name, raffle.title),
+      subject: "Recibimos tu compra — pendiente de aprobación · Ganas con Latam",
+      html: emailVerificacionPago({
+        nombre: name,
+        titulo: raffle.title,
+        imagenUrl: raffle.imageUrl,
+        numeros: numbers.join(", "),
+        totalBs: amountBs,
+        totalUsd: amountUsd,
+        referencia: input.reference?.trim().slice(0, 200) ?? "",
+        metodoPago,
+      }),
     });
   }
 

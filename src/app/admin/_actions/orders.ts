@@ -7,6 +7,7 @@ import {
   sendEmail,
   emailVerificacionPago,
   emailPagoAprobado,
+  emailPagoRechazado,
 } from "@/lib/email";
 
 export async function getOrders(status?: "PENDIENTE" | "APROBADO" | "RECHAZADO") {
@@ -26,15 +27,21 @@ export async function approveOrder(id: string) {
     include: { raffle: true },
   });
 
-  await sendEmail({
-    to: order.buyerEmail,
-    subject: "Pago aprobado - Ganas con Latam",
-    html: emailPagoAprobado(
-      order.buyerName,
-      order.raffle.title,
-      order.ticketNumbers
-    ),
-  });
+  if (order.buyerEmail) {
+    await sendEmail({
+      to: order.buyerEmail,
+      subject: "¡Tu compra fue aprobada! · Ganas con Latam",
+      html: emailPagoAprobado({
+        nombre: order.buyerName,
+        titulo: order.raffle.title,
+        imagenUrl: order.raffle.imageUrl,
+        numeros: order.ticketNumbers.split(",").join(", "),
+        totalBs: order.amountBs,
+        totalUsd: order.amountUsd,
+        referencia: order.reference,
+      }),
+    });
+  }
 
   revalidatePath("/admin/boletos");
   revalidatePath("/admin");
@@ -45,10 +52,28 @@ export async function approveOrder(id: string) {
 
 export async function rejectOrder(id: string) {
   await requireAdmin();
-  await prisma.ticketOrder.update({
+  const order = await prisma.ticketOrder.update({
     where: { id },
     data: { status: "RECHAZADO" },
+    include: { raffle: true },
   });
+
+  if (order.buyerEmail) {
+    await sendEmail({
+      to: order.buyerEmail,
+      subject: "Sobre tu compra en Ganas con Latam",
+      html: emailPagoRechazado({
+        nombre: order.buyerName,
+        titulo: order.raffle.title,
+        imagenUrl: order.raffle.imageUrl,
+        numeros: order.ticketNumbers.split(",").join(", "),
+        totalBs: order.amountBs,
+        totalUsd: order.amountUsd,
+        referencia: order.reference,
+      }),
+    });
+  }
+
   revalidatePath("/admin/boletos");
   revalidatePath("/admin");
   revalidatePath("/admin/participantes");
@@ -63,11 +88,19 @@ export async function resendVerificationEmail(id: string) {
     where: { id },
     include: { raffle: true },
   });
-  if (!order) return;
+  if (!order || !order.buyerEmail) return;
   await sendEmail({
     to: order.buyerEmail,
-    subject: "Verificación de pago en proceso - Ganas con Latam",
-    html: emailVerificacionPago(order.buyerName, order.raffle.title),
+    subject: "Recibimos tu compra — pendiente de aprobación · Ganas con Latam",
+    html: emailVerificacionPago({
+      nombre: order.buyerName,
+      titulo: order.raffle.title,
+      imagenUrl: order.raffle.imageUrl,
+      numeros: order.ticketNumbers.split(",").join(", "),
+      totalBs: order.amountBs,
+      totalUsd: order.amountUsd,
+      referencia: order.reference,
+    }),
   });
 }
 

@@ -5,6 +5,7 @@ import { requireAdmin } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { RaffleStatus } from "@prisma/client";
+import { sendEmail, emailNuevoSorteo } from "@/lib/email";
 
 export async function getRaffles() {
   return prisma.raffle.findMany({ orderBy: { createdAt: "desc" } });
@@ -32,10 +33,62 @@ function parseRaffleForm(formData: FormData) {
 export async function createRaffle(formData: FormData) {
   await requireAdmin();
   const data = parseRaffleForm(formData);
-  await prisma.raffle.create({ data });
+  const raffle = await prisma.raffle.create({ data });
+
+  // Avisar a los participantes con correo que se liberó un nuevo sorteo.
+  await notifyNewRaffle(raffle);
+
   revalidatePath("/admin/rifas");
   revalidatePath("/");
   redirect("/admin/rifas");
+}
+
+// Notifica por correo a todos los participantes registrados (con email válido)
+// que hay un nuevo sorteo disponible. Los fallos de envío no bloquean la creación.
+async function notifyNewRaffle(raffle: {
+  title: string;
+  details: string;
+  imageUrl: string;
+  priceUsd: number;
+  drawDate: string;
+  drawTime: string;
+  code: string;
+}) {
+  try {
+    const participants = await prisma.participant.findMany({
+      where: { email: { not: "" } },
+      select: { email: true },
+      distinct: ["email"],
+    });
+    const recipients = participants
+      .map((p) => p.email.trim())
+      .filter((e) => e.includes("@"));
+    if (recipients.length === 0) return;
+
+    const config = await prisma.siteConfig.findUnique({ where: { id: 1 } });
+    const rate = config?.dollarRate ?? 0;
+
+    const html = emailNuevoSorteo({
+      titulo: raffle.title,
+      descripcion: raffle.details,
+      imagenUrl: raffle.imageUrl,
+      precioUsd: raffle.priceUsd,
+      precioBs: rate > 0 ? raffle.priceUsd * rate : undefined,
+      fecha: raffle.drawDate,
+      hora: raffle.drawTime,
+      codigo: raffle.code,
+    });
+
+    for (const to of recipients) {
+      await sendEmail({
+        to,
+        subject: `Nuevo sorteo disponible: ${raffle.title} · Ganas con Latam`,
+        html,
+      });
+    }
+  } catch (err) {
+    console.error("[v0] Error notificando nuevo sorteo:", err);
+  }
 }
 
 export async function updateRaffle(id: string, formData: FormData) {
