@@ -70,7 +70,6 @@ export async function rejectOrder(id: string) {
         totalBs: order.amountBs,
         totalUsd: order.amountUsd,
         referencia: order.reference,
-        motivo,
       }),
     });
   }
