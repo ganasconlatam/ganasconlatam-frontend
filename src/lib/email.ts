@@ -8,6 +8,20 @@ const SITE_URL = "https://www.ganaconllatam.com";
 const LOGO_URL = `${SITE_URL}/images/4.webp`;
 const SUPPORT_URL = `${SITE_URL}/#soporte`;
 
+// Adjunto inline: las imágenes del sorteo se guardan como data URL base64 en la
+// base de datos, y los clientes de correo (Gmail, Outlook) NO renderizan
+// imágenes `data:`. Por eso se envían como adjuntos inline referenciados con
+// `cid:` en el HTML, que es el estándar que sí se muestra correctamente.
+export type EmailAttachment = {
+  filename: string;
+  content: string; // base64 sin el prefijo data:
+  contentId: string;
+};
+
+export type EmailTag = { name: string; value: string };
+
+export type RenderedEmail = { html: string; attachments: EmailAttachment[] };
+
 // ---------------------------------------------------------------------------
 // Envío base. El SDK de Resend NO lanza excepciones: devuelve { data, error }.
 // Un fallo de correo nunca debe romper el flujo de compra/aprobación, así que
@@ -17,11 +31,15 @@ export async function sendEmail({
   to,
   subject,
   html,
+  attachments,
+  tags,
   idempotencyKey,
 }: {
   to: string;
   subject: string;
   html: string;
+  attachments?: EmailAttachment[];
+  tags?: EmailTag[];
   idempotencyKey?: string;
 }) {
   if (!process.env.RESEND_API_KEY) {
@@ -29,7 +47,14 @@ export async function sendEmail({
     return { ok: false as const, skipped: true as const };
   }
   const { data, error } = await resend.emails.send(
-    { from: FROM, to: [to], subject, html },
+    {
+      from: FROM,
+      to: [to],
+      subject,
+      html,
+      ...(attachments && attachments.length ? { attachments } : {}),
+      ...(tags && tags.length ? { tags } : {}),
+    },
     idempotencyKey ? { idempotencyKey } : undefined,
   );
   if (error) {
@@ -46,6 +71,29 @@ function absUrl(url: string): string {
   if (!url) return "";
   if (/^https?:\/\//i.test(url)) return url;
   return `${SITE_URL}${url.startsWith("/") ? "" : "/"}${url}`;
+}
+
+// Resuelve la imagen del sorteo a algo que el correo pueda mostrar:
+// - data URL base64  -> adjunto inline + src `cid:...`
+// - URL http/https   -> src directo, sin adjunto
+// - relativa al sitio -> URL absoluta, sin adjunto
+function resolveImage(
+  imageUrl: string,
+  cid: string,
+): { src: string; attachments: EmailAttachment[] } {
+  const url = (imageUrl || "").trim();
+  if (!url) return { src: "", attachments: [] };
+  const m = /^data:(image\/[a-z0-9.+-]+);base64,([\s\S]+)$/i.exec(url);
+  if (m) {
+    const mime = m[1].toLowerCase();
+    const content = m[2].replace(/\s/g, "");
+    const ext = (mime.split("/")[1] || "png").replace(/[^a-z0-9]/g, "") || "png";
+    return {
+      src: `cid:${cid}`,
+      attachments: [{ filename: `${cid}.${ext}`, content, contentId: cid }],
+    };
+  }
+  return { src: absUrl(url), attachments: [] };
 }
 
 function fmtBs(n: number): string {
@@ -95,8 +143,7 @@ function darkHeader(): string {
 }
 
 // Banner con la imagen del sorteo (usada en pendiente / aprobado).
-function bannerBlock(imagenUrl: string, titulo: string): string {
-  const src = absUrl(imagenUrl);
+function bannerBlock(src: string, titulo: string): string {
   if (!src) return "";
   return `
     <tr><td style="background:#151f32;padding:0;">
@@ -138,13 +185,14 @@ export function emailVerificacionPago(p: {
   totalUsd: number;
   referencia: string;
   metodoPago?: string;
-}): string {
+}): RenderedEmail {
   const tickets = splitTickets(p.numeros);
   const orange = "#f59e0b";
   const green = "#22c55e";
+  const img = resolveImage(p.imagenUrl, "sorteo");
   const inner = `
     ${darkHeader()}
-    ${bannerBlock(p.imagenUrl, p.titulo)}
+    ${bannerBlock(img.src, p.titulo)}
     <tr><td style="padding:28px 32px 8px;font-family:Arial,Helvetica,sans-serif;text-align:center;">
       <div style="font-size:24px;font-weight:800;color:${orange};">¡Verificando Pago! &#9203;</div>
       <div style="font-size:14px;font-weight:700;color:#1e293b;margin-top:8px;">Hemos recibido tu reporte de pago y pronto será verificado</div>
@@ -183,7 +231,7 @@ export function emailVerificacionPago(p: {
     </td></tr>
     ${footerLight()}
   `;
-  return shell(inner);
+  return { html: shell(inner), attachments: img.attachments };
 }
 
 // ===========================================================================
@@ -197,12 +245,13 @@ export function emailPagoAprobado(p: {
   totalBs: number;
   totalUsd: number;
   referencia: string;
-}): string {
+}): RenderedEmail {
   const tickets = splitTickets(p.numeros);
   const green = "#16a34a";
+  const img = resolveImage(p.imagenUrl, "sorteo");
   const inner = `
     ${darkHeader()}
-    ${bannerBlock(p.imagenUrl, p.titulo)}
+    ${bannerBlock(img.src, p.titulo)}
     <tr><td style="padding:28px 32px 0;font-family:Arial,Helvetica,sans-serif;text-align:center;">
       <div style="font-size:22px;font-weight:800;color:${green};">¡Felicidades, tu pago ha sido aprobado! &#127881;</div>
       <p style="font-size:14px;color:#334155;line-height:1.6;margin:14px 0 0;">
@@ -227,7 +276,7 @@ export function emailPagoAprobado(p: {
     </td></tr>
     ${footerLight()}
   `;
-  return shell(inner);
+  return { html: shell(inner), attachments: img.attachments };
 }
 
 // ===========================================================================
@@ -242,7 +291,7 @@ export function emailPagoRechazado(p: {
   totalUsd: number;
   referencia: string;
   motivo?: string;
-}): string {
+}): RenderedEmail {
   const red = "#ef4444";
   const motivo =
     p.motivo?.trim() ||
@@ -280,7 +329,7 @@ export function emailPagoRechazado(p: {
       &copy; ${new Date().getFullYear()} Ganas con Latam. Todos los derechos reservados.
     </td></tr>
   `;
-  return shell(inner);
+  return { html: shell(inner), attachments: [] };
 }
 
 // ===========================================================================
@@ -295,8 +344,8 @@ export function emailNuevoSorteo(p: {
   fecha: string;
   hora: string;
   codigo: string;
-}): string {
-  const src = absUrl(p.imagenUrl);
+}): RenderedEmail {
+  const img = resolveImage(p.imagenUrl, "sorteo");
   const descripcion = (p.descripcion || "").trim();
   const fechaHora = [p.fecha, p.hora].filter(Boolean).join(" — ");
   const precio = `Boleto: <span style="color:#22c55e;font-weight:800;">${fmtUsd(p.precioUsd)}</span>${
@@ -319,9 +368,9 @@ export function emailNuevoSorteo(p: {
       ${descripcion ? `<p style="font-size:14px;color:#cbd5e1;line-height:1.7;margin:14px 0 0;white-space:pre-line;">${escapeHtml(descripcion)}</p>` : ""}
     </td></tr>
     ${
-      src
+      img.src
         ? `<tr><td style="background:#0f1729;padding:20px 32px 0;">
-             <img src="${src}" alt="${escapeHtml(p.titulo)}" width="536" style="display:block;width:100%;border-radius:12px;height:auto;" />
+             <img src="${img.src}" alt="${escapeHtml(p.titulo)}" width="536" style="display:block;width:100%;border-radius:12px;height:auto;" />
            </td></tr>`
         : ""
     }
@@ -341,7 +390,7 @@ export function emailNuevoSorteo(p: {
       &copy; ${new Date().getFullYear()} Ganas con Latam. Todos los derechos reservados.
     </td></tr>
   `;
-  return shell(inner, "#0f1729");
+  return { html: shell(inner, "#0f1729"), attachments: img.attachments };
 }
 
 function footerLight(): string {

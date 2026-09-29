@@ -28,18 +28,22 @@ export async function approveOrder(id: string) {
   });
 
   if (order.buyerEmail) {
+    const { html, attachments } = emailPagoAprobado({
+      nombre: order.buyerName,
+      titulo: order.raffle.title,
+      imagenUrl: order.raffle.imageUrl,
+      numeros: order.ticketNumbers.split(",").join(", "),
+      totalBs: order.amountBs,
+      totalUsd: order.amountUsd,
+      referencia: order.reference,
+    });
     await sendEmail({
       to: order.buyerEmail,
       subject: "¡Tu compra fue aprobada! · Ganas con Latam",
-      html: emailPagoAprobado({
-        nombre: order.buyerName,
-        titulo: order.raffle.title,
-        imagenUrl: order.raffle.imageUrl,
-        numeros: order.ticketNumbers.split(",").join(", "),
-        totalBs: order.amountBs,
-        totalUsd: order.amountUsd,
-        referencia: order.reference,
-      }),
+      html,
+      attachments,
+      tags: [{ name: "tipo", value: "compra-aprobada" }],
+      idempotencyKey: `aprobado-${order.id}`,
     });
   }
 
@@ -50,8 +54,9 @@ export async function approveOrder(id: string) {
   revalidatePath("/");
 }
 
-export async function rejectOrder(id: string) {
+export async function rejectOrder(id: string, formData?: FormData) {
   await requireAdmin();
+  const motivo = (formData?.get("motivo") as string | null)?.trim() || undefined;
   const order = await prisma.ticketOrder.update({
     where: { id },
     data: { status: "RECHAZADO" },
@@ -59,18 +64,23 @@ export async function rejectOrder(id: string) {
   });
 
   if (order.buyerEmail) {
+    const { html, attachments } = emailPagoRechazado({
+      nombre: order.buyerName,
+      titulo: order.raffle.title,
+      imagenUrl: order.raffle.imageUrl,
+      numeros: order.ticketNumbers.split(",").join(", "),
+      totalBs: order.amountBs,
+      totalUsd: order.amountUsd,
+      referencia: order.reference,
+      motivo,
+    });
     await sendEmail({
       to: order.buyerEmail,
       subject: "Sobre tu compra en Ganas con Latam",
-      html: emailPagoRechazado({
-        nombre: order.buyerName,
-        titulo: order.raffle.title,
-        imagenUrl: order.raffle.imageUrl,
-        numeros: order.ticketNumbers.split(",").join(", "),
-        totalBs: order.amountBs,
-        totalUsd: order.amountUsd,
-        referencia: order.reference,
-      }),
+      html,
+      attachments,
+      tags: [{ name: "tipo", value: "compra-rechazada" }],
+      idempotencyKey: `rechazado-${order.id}`,
     });
   }
 
@@ -89,18 +99,21 @@ export async function resendVerificationEmail(id: string) {
     include: { raffle: true },
   });
   if (!order || !order.buyerEmail) return;
+  const { html, attachments } = emailVerificacionPago({
+    nombre: order.buyerName,
+    titulo: order.raffle.title,
+    imagenUrl: order.raffle.imageUrl,
+    numeros: order.ticketNumbers.split(",").join(", "),
+    totalBs: order.amountBs,
+    totalUsd: order.amountUsd,
+    referencia: order.reference,
+  });
   await sendEmail({
     to: order.buyerEmail,
     subject: "Recibimos tu compra — pendiente de aprobación · Ganas con Latam",
-    html: emailVerificacionPago({
-      nombre: order.buyerName,
-      titulo: order.raffle.title,
-      imagenUrl: order.raffle.imageUrl,
-      numeros: order.ticketNumbers.split(",").join(", "),
-      totalBs: order.amountBs,
-      totalUsd: order.amountUsd,
-      referencia: order.reference,
-    }),
+    html,
+    attachments,
+    tags: [{ name: "tipo", value: "compra-pendiente" }],
   });
 }
 

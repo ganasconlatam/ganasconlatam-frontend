@@ -240,19 +240,22 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
       });
       metodoPago = pm?.name;
     }
+    const { html, attachments } = emailVerificacionPago({
+      nombre: name,
+      titulo: raffle.title,
+      imagenUrl: raffle.imageUrl,
+      numeros: numbers.join(", "),
+      totalBs: amountBs,
+      totalUsd: amountUsd,
+      referencia: input.reference?.trim().slice(0, 200) ?? "",
+      metodoPago,
+    });
     await sendEmail({
       to: input.buyerEmail.trim(),
       subject: "Recibimos tu compra — pendiente de aprobación · Ganas con Latam",
-      html: emailVerificacionPago({
-        nombre: name,
-        titulo: raffle.title,
-        imagenUrl: raffle.imageUrl,
-        numeros: numbers.join(", "),
-        totalBs: amountBs,
-        totalUsd: amountUsd,
-        referencia: input.reference?.trim().slice(0, 200) ?? "",
-        metodoPago,
-      }),
+      html,
+      attachments,
+      tags: [{ name: "tipo", value: "compra-pendiente" }],
     });
   }
 
