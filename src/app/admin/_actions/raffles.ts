@@ -68,7 +68,7 @@ async function notifyNewRaffle(raffle: {
     const config = await prisma.siteConfig.findUnique({ where: { id: 1 } });
     const rate = config?.dollarRate ?? 0;
 
-    const html = emailNuevoSorteo({
+    const { html, attachments } = emailNuevoSorteo({
       titulo: raffle.title,
       descripcion: raffle.details,
       imagenUrl: raffle.imageUrl,
@@ -84,6 +84,9 @@ async function notifyNewRaffle(raffle: {
         to,
         subject: `Nuevo sorteo disponible: ${raffle.title} · Ganas con Latam`,
         html,
+        attachments,
+        tags: [{ name: "tipo", value: "nuevo-sorteo" }],
+        idempotencyKey: `nuevo-sorteo-${raffle.code}-${to}`,
       });
     }
   } catch (err) {

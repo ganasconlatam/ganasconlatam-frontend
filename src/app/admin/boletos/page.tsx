@@ -109,18 +109,39 @@ function OrderCard({ order: o, pending = false }: { order: any; pending?: boolea
         </div>
       ) : null}
 
-      <div className="mt-4 flex flex-wrap items-center gap-2">
+      <div className="mt-4 space-y-3">
         {pending ? (
           <>
-            <form action={approveOrder.bind(null, o.id)}>
-              <button className="rounded-lg bg-green-500/15 border border-green-500/30 px-3 py-1.5 text-sm font-semibold text-green-400 hover:bg-green-500/25">
-                Aprobar pago
-              </button>
-            </form>
-            <form action={rejectOrder.bind(null, o.id)}>
-              <button className="rounded-lg bg-red-500/15 border border-red-500/30 px-3 py-1.5 text-sm font-semibold text-red-400 hover:bg-red-500/25">
-                Rechazar
-              </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <form action={approveOrder.bind(null, o.id)}>
+                <button className="rounded-lg bg-green-500/15 border border-green-500/30 px-3 py-1.5 text-sm font-semibold text-green-400 hover:bg-green-500/25">
+                  Aprobar pago
+                </button>
+              </form>
+            </div>
+            <form action={rejectOrder.bind(null, o.id)} className="rounded-xl border border-red-500/20 bg-red-500/5 p-3">
+              <label
+                htmlFor={`motivo-${o.id}`}
+                className="block text-xs font-bold text-red-300/80 uppercase mb-1.5"
+              >
+                Motivo del rechazo (se enviará al cliente)
+              </label>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <input
+                  id={`motivo-${o.id}`}
+                  name="motivo"
+                  type="text"
+                  maxLength={300}
+                  placeholder="Ej: El comprobante no coincide con la referencia reportada"
+                  className="flex-1 rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-1.5 text-sm text-white placeholder:text-slate-500 focus:border-red-500/50 focus:outline-none"
+                />
+                <button className="shrink-0 rounded-lg bg-red-500/15 border border-red-500/30 px-3 py-1.5 text-sm font-semibold text-red-400 hover:bg-red-500/25">
+                  Rechazar
+                </button>
+              </div>
+              <p className="mt-1.5 text-xs text-slate-500">
+                Si lo dejas vacío, se enviará un motivo genérico.
+              </p>
             </form>
           </>
         ) : null}
