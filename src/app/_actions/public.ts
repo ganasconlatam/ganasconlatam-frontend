@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { usdToBs } from "@/lib/money";
 import { sendEmail, emailVerificacionPago } from "@/lib/email";
 
@@ -25,6 +26,76 @@ async function getTakenSet(raffleId: string): Promise<Set<string>> {
   return new Set(orders.flatMap((o) => splitNumbers(o.ticketNumbers)));
 }
 
+const VISITOR_COOKIE = "gcl_vid";
+
+async function readVisitorId(): Promise<string | null> {
+  const store = await cookies();
+  return store.get(VISITOR_COOKIE)?.value ?? null;
+}
+
+async function getLikeInfo(raffleId: string) {
+  const visitorId = await readVisitorId();
+  const [likeCount, mine] = await Promise.all([
+    prisma.raffleLike.count({ where: { raffleId } }),
+    visitorId
+      ? prisma.raffleLike.findUnique({
+          where: { raffleId_visitorId: { raffleId, visitorId } },
+          select: { id: true },
+        })
+      : null,
+  ]);
+  return { likeCount, likedByMe: !!mine };
+}
+
+export interface RecentRaffle {
+  id: string;
+  code: string;
+  title: string;
+  imageUrl: string;
+  drawDate: string;
+  drawTime: string;
+  status: "ACTIVA" | "PROXIMA" | "FINALIZADA";
+}
+
+async function getRecentRaffles(excludeId?: string): Promise<RecentRaffle[]> {
+  return prisma.raffle.findMany({
+    where: excludeId ? { id: { not: excludeId } } : undefined,
+    orderBy: { createdAt: "desc" },
+    take: 10,
+    select: { id: true, code: true, title: true, imageUrl: true, drawDate: true, drawTime: true, status: true },
+  });
+}
+
+// Like único por visitante. Si el visitante ya dio like, lo retira (toggle).
+// La restricción única (raffleId, visitorId) garantiza que nunca se duplique.
+export async function toggleRaffleLike(raffleId: string) {
+  if (typeof raffleId !== "string" || !raffleId) return { ok: false as const };
+  const exists = await prisma.raffle.findUnique({ where: { id: raffleId }, select: { id: true } });
+  if (!exists) return { ok: false as const };
+
+  const store = await cookies();
+  let visitorId = store.get(VISITOR_COOKIE)?.value;
+  if (!visitorId || !/^[a-zA-Z0-9-]{8,64}$/.test(visitorId)) {
+    visitorId = crypto.randomUUID();
+    store.set(VISITOR_COOKIE, visitorId, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 365 * 2,
+    });
+  }
+
+  const where = { raffleId_visitorId: { raffleId, visitorId } };
+  const existing = await prisma.raffleLike.findUnique({ where, select: { id: true } });
+  if (existing) {
+    await prisma.raffleLike.delete({ where });
+  } else {
+    await prisma.raffleLike.upsert({ where, update: {}, create: { raffleId, visitorId } });
+  }
+  return { ok: true as const, ...(await getLikeInfo(raffleId)) };
+}
+
 // Datos que necesita la página principal para renderizarse dinámicamente.
 export async function getStorefront() {
   const [config, activeRaffle, paymentMethods, socialLinks, top] = await Promise.all([
@@ -35,7 +106,11 @@ export async function getStorefront() {
     prisma.topPurchase.findMany({ orderBy: { position: "asc" } }),
   ]);
 
-  const takenNumbers = activeRaffle ? [...(await getTakenSet(activeRaffle.id))] : [];
+  const [takenNumbers, likes, recentRaffles] = await Promise.all([
+    activeRaffle ? getTakenSet(activeRaffle.id).then((s) => [...s]) : Promise.resolve([] as string[]),
+    activeRaffle ? getLikeInfo(activeRaffle.id) : Promise.resolve({ likeCount: 0, likedByMe: false }),
+    getRecentRaffles(activeRaffle?.id),
+  ]);
 
   return {
     config,
@@ -44,6 +119,8 @@ export async function getStorefront() {
     socialLinks,
     top,
     takenNumbers,
+    likes,
+    recentRaffles,
   };
 }
 
@@ -63,7 +140,11 @@ export async function getStorefrontByCode(code: string) {
     prisma.topPurchase.findMany({ orderBy: { position: "asc" } }),
   ]);
 
-  const takenNumbers = raffle ? [...(await getTakenSet(raffle.id))] : [];
+  const [takenNumbers, likes, recentRaffles] = await Promise.all([
+    raffle ? getTakenSet(raffle.id).then((s) => [...s]) : Promise.resolve([] as string[]),
+    raffle ? getLikeInfo(raffle.id) : Promise.resolve({ likeCount: 0, likedByMe: false }),
+    getRecentRaffles(raffle?.id),
+  ]);
 
   return {
     config,
@@ -72,6 +153,8 @@ export async function getStorefrontByCode(code: string) {
     socialLinks,
     top,
     takenNumbers,
+    likes,
+    recentRaffles,
   };
 }
 
