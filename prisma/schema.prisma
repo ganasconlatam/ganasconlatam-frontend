@@ -60,6 +60,21 @@ model Raffle {
   updatedAt     DateTime     @updatedAt
 
   orders TicketOrder[]
+  likes  RaffleLike[]
+}
+
+// Like único por visitante: el visitorId vive en una cookie httpOnly y la
+// restricción única impide que un mismo visitante sume más de un like.
+model RaffleLike {
+  id        String   @id @default(cuid())
+  raffleId  String
+  visitorId String
+  createdAt DateTime @default(now())
+
+  raffle Raffle @relation(fields: [raffleId], references: [id], onDelete: Cascade)
+
+  @@unique([raffleId, visitorId])
+  @@index([raffleId])
 }
 
 model Participant {
